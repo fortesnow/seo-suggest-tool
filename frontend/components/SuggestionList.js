@@ -1,6 +1,6 @@
 import styles from '../styles/SuggestionList.module.css';
 
-const SuggestionList = ({ suggestions, keyword }) => {
+const SuggestionList = ({ suggestions, keyword, showVolume = false }) => {
   if (!suggestions || suggestions.length === 0) {
     return <p className={styles.noResults}>サジェストが見つかりませんでした</p>;
   }
@@ -17,13 +17,36 @@ const SuggestionList = ({ suggestions, keyword }) => {
     });
   };
 
+  // 検索ボリュームのフォーマット
+  const formatVolume = (volume) => {
+    if (volume >= 1000) {
+      return `${(volume / 1000).toFixed(1)}k`;
+    }
+    return volume;
+  };
+
   return (
     <ul className={styles.suggestionList}>
-      {suggestions.map((suggestion, index) => (
-        <li key={index} className={styles.suggestionItem}>
-          {highlightKeyword(suggestion, keyword)}
-        </li>
-      ))}
+      {suggestions.map((suggestion, index) => {
+        // 新しいAPIレスポース形式（オブジェクト）と古い形式（文字列）の両方に対応
+        const keyword = typeof suggestion === 'object' ? suggestion.keyword : suggestion;
+        const volume = typeof suggestion === 'object' ? suggestion.volume : null;
+        
+        return (
+          <li key={index} className={styles.suggestionItem}>
+            <div className={styles.suggestionContent}>
+              <span className={styles.suggestionText}>
+                {highlightKeyword(keyword, keyword)}
+              </span>
+              {showVolume && volume !== null && (
+                <span className={styles.volumeBadge} title="推定月間検索ボリューム">
+                  {formatVolume(volume)}
+                </span>
+              )}
+            </div>
+          </li>
+        );
+      })}
     </ul>
   );
 };

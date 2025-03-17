@@ -15,6 +15,29 @@
   border-bottom: none;
 }
 
+.suggestionContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.suggestionText {
+  flex: 1;
+}
+
+.volumeBadge {
+  display: inline-block;
+  background-color: #e2f2ff;
+  color: #0070f3;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  margin-left: 0.75rem;
+  min-width: 3rem;
+  text-align: center;
+}
+
 .highlight {
   background-color: #fff4de;
   font-weight: bold;

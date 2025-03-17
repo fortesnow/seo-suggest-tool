@@ -50,6 +50,9 @@
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .resultSection h2 {
@@ -58,6 +61,7 @@
   border-bottom: 1px solid #eaeaea;
   padding-bottom: 0.5rem;
   margin-bottom: 1rem;
+  font-size: 1.25rem;
 }
 
 .loading {
@@ -70,6 +74,13 @@
   margin: 1rem 0;
   color: #e53e3e;
   text-align: center;
+}
+
+.noResults {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  margin: 1rem 0;
 }
 
 .footer {

@@ -7,8 +7,11 @@ import styles from '../styles/Home.module.css';
 
 export default function Home() {
   const [loading, setLoading] = useState(false);
+  const [longTailLoading, setLongTailLoading] = useState(false);
   const [googleSuggestions, setGoogleSuggestions] = useState([]);
+  const [longTailSuggestions, setLongTailSuggestions] = useState([]);
   const [error, setError] = useState('');
+  const [longTailError, setLongTailError] = useState('');
   const [keyword, setKeyword] = useState('');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -29,15 +32,24 @@ export default function Home() {
     
     setKeyword(keyword);
     setLoading(true);
+    setLongTailLoading(true);
     setError('');
+    setLongTailError('');
     
     try {
       // Googleサジェストの取得
       const googleResponse = await axios.get(`${API_URL}/api/suggestions?keyword=${encodeURIComponent(keyword)}`);
       setGoogleSuggestions(googleResponse.data.suggestions || []);
+      
+      // ロングテールキーワードの取得
+      const longTailResponse = await axios.get(`${API_URL}/api/longtail-suggestions?keyword=${encodeURIComponent(keyword)}`);
+      setLongTailSuggestions(longTailResponse.data.suggestions || []);
+      setLongTailLoading(false);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setError('キーワード取得中にエラーが発生しました。しばらく経ってからお試しください。');
+      setLongTailError('ロングテールキーワード取得中にエラーが発生しました。');
+      setLongTailLoading(false);
     } finally {
       setLoading(false);
     }
@@ -47,7 +59,7 @@ export default function Home() {
     <div className={styles.container}>
       <Head>
         <title>SEO検索サジェストツール</title>
-        <meta name="description" content="Googleの検索サジェストキーワードを取得するツール" />
+        <meta name="description" content="Googleの検索サジェストキーワードと検索ボリュームを取得するツール" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -55,7 +67,7 @@ export default function Home() {
         <h1 className={styles.title}>SEO検索サジェストツール</h1>
         
         <p className={styles.description}>
-          Googleの検索サジェストキーワードを取得できます
+          Googleの検索サジェストキーワードと検索ボリュームを取得できます
         </p>
         
         <SearchForm onSearch={fetchSuggestions} />
@@ -68,9 +80,30 @@ export default function Home() {
           keyword && (
             <div className={styles.results}>
               <div className={styles.resultSection}>
-                <h2>Google検索サジェスト</h2>
-                <SuggestionList suggestions={googleSuggestions} keyword={keyword} />
+                <h2>Google検索サジェスト（検索ボリューム付き）</h2>
+                <SuggestionList suggestions={googleSuggestions} keyword={keyword} showVolume={true} />
               </div>
+              
+              {longTailLoading ? (
+                <div className={styles.resultSection}>
+                  <h2>ロングテールキーワード（3語以上）</h2>
+                  <p className={styles.loading}>ロングテールキーワードを取得中...</p>
+                </div>
+              ) : longTailError ? (
+                <div className={styles.resultSection}>
+                  <h2>ロングテールキーワード（3語以上）</h2>
+                  <p className={styles.error}>{longTailError}</p>
+                </div>
+              ) : (
+                <div className={styles.resultSection}>
+                  <h2>ロングテールキーワード（3語以上）</h2>
+                  {longTailSuggestions.length > 0 ? (
+                    <SuggestionList suggestions={longTailSuggestions} keyword={keyword} showVolume={true} />
+                  ) : (
+                    <p className={styles.noResults}>3語以上のロングテールキーワードが見つかりませんでした</p>
+                  )}
+                </div>
+              )}
             </div>
           )
         )}
