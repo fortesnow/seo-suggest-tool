@@ -8,7 +8,6 @@ import styles from '../styles/Home.module.css';
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [googleSuggestions, setGoogleSuggestions] = useState([]);
-  const [yahooSuggestions, setYahooSuggestions] = useState([]);
   const [error, setError] = useState('');
   const [keyword, setKeyword] = useState('');
 
@@ -36,10 +35,6 @@ export default function Home() {
       // Googleサジェストの取得
       const googleResponse = await axios.get(`${API_URL}/api/suggestions?keyword=${encodeURIComponent(keyword)}`);
       setGoogleSuggestions(googleResponse.data.suggestions || []);
-      
-      // Yahoo!サジェストの取得
-      const yahooResponse = await axios.get(`${API_URL}/api/yahoo-suggestions?keyword=${encodeURIComponent(keyword)}`);
-      setYahooSuggestions(yahooResponse.data.suggestions || []);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setError('キーワード取得中にエラーが発生しました。しばらく経ってからお試しください。');
@@ -52,7 +47,7 @@ export default function Home() {
     <div className={styles.container}>
       <Head>
         <title>SEO検索サジェストツール</title>
-        <meta name="description" content="GoogleとYahoo!の検索サジェストキーワードを取得するツール" />
+        <meta name="description" content="Googleの検索サジェストキーワードを取得するツール" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -60,7 +55,7 @@ export default function Home() {
         <h1 className={styles.title}>SEO検索サジェストツール</h1>
         
         <p className={styles.description}>
-          GoogleとYahoo!の検索サジェストキーワードを取得できます
+          Googleの検索サジェストキーワードを取得できます
         </p>
         
         <SearchForm onSearch={fetchSuggestions} />
@@ -75,11 +70,6 @@ export default function Home() {
               <div className={styles.resultSection}>
                 <h2>Google検索サジェスト</h2>
                 <SuggestionList suggestions={googleSuggestions} keyword={keyword} />
-              </div>
-              
-              <div className={styles.resultSection}>
-                <h2>Yahoo!検索サジェスト</h2>
-                <SuggestionList suggestions={yahooSuggestions} keyword={keyword} />
               </div>
             </div>
           )
