@@ -50,11 +50,12 @@ app.post('/api/analyze-needs', async (req, res) => {
       return res.status(400).json({ error: 'キーワードは必須です' });
     }
 
-    console.log(`Analyzing keyword: "${keyword}"`);
+    console.log(`[DEBUG] Analyzing keyword: "${keyword}"`);
+    console.log(`[DEBUG] API_KEY exists: ${Boolean(API_KEY)}, length: ${API_KEY ? API_KEY.length : 0}`);
 
     // APIキーが設定されていない場合はモック応答を返す
     if (!API_KEY || !genAI) {
-      console.warn('GEMINI_API_KEY is not set, using mock response');
+      console.warn('[DEBUG] GEMINI_API_KEY is not set, using mock response');
       return res.status(200).json({
         keyword,
         analysis: mockAnalysis(keyword),
@@ -64,47 +65,91 @@ app.post('/api/analyze-needs', async (req, res) => {
     }
 
     // Gemini APIを使用してニーズ分析
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    
-    const prompt = `
-    以下のキーワードについて、SEO視点から潜在ニーズと顕在ニーズを分析してください:
-    
-    キーワード: "${keyword}"
-    
-    以下の形式で回答してください:
-    - 顕在ニーズ: [明示的に表現されている検索意図]
-    - 潜在ニーズ: [検索の背景にある可能性が高い隠れたニーズや悩み]
-    - ターゲットユーザー: [このキーワードを検索しそうなユーザー像]
-    - コンテンツ提案: [このキーワードに効果的に対応するコンテンツの種類]
-    
-    簡潔に、箇条書きで各項目100文字以内で回答してください。
-    `;
+    try {
+      console.log('[DEBUG] Creating Gemini model instance');
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      
+      const prompt = `
+      以下のキーワードについて、SEO視点から潜在ニーズと顕在ニーズを分析してください:
+      
+      キーワード: "${keyword}"
+      
+      以下の形式で回答してください:
+      - 顕在ニーズ: [明示的に表現されている検索意図]
+      - 潜在ニーズ: [検索の背景にある可能性が高い隠れたニーズや悩み]
+      - ターゲットユーザー: [このキーワードを検索しそうなユーザー像]
+      - コンテンツ提案: [このキーワードに効果的に対応するコンテンツの種類]
+      
+      簡潔に、箇条書きで各項目100文字以内で回答してください。
+      `;
+      
+      console.log('[DEBUG] Prompt:', prompt);
+      console.log('[DEBUG] Sending request to Gemini API...');
 
-    // 安全装置として、15秒のタイムアウトを設定
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('API request timeout')), 15000);
-    });
+      // 安全装置として、15秒のタイムアウトを設定
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('API request timeout')), 15000);
+      });
 
-    // Gemini APIリクエストを実行
-    const result = await Promise.race([
-      model.generateContent(prompt),
-      timeoutPromise
-    ]);
+      // Gemini APIリクエストを実行
+      const result = await Promise.race([
+        model.generateContent(prompt).catch(e => {
+          console.error('[DEBUG] Gemini API generateContent error:', e);
+          console.error('[DEBUG] Error name:', e.name);
+          console.error('[DEBUG] Error message:', e.message);
+          throw e;
+        }),
+        timeoutPromise
+      ]);
 
-    if (!result || !result.response) {
-      throw new Error('Gemini APIからの応答が空です');
+      console.log('[DEBUG] Gemini API request completed');
+
+      if (!result) {
+        console.error('[DEBUG] Empty result from Gemini API');
+        throw new Error('Gemini APIからの応答が空です');
+      }
+
+      console.log('[DEBUG] Response object:', JSON.stringify(result).substring(0, 200) + '...');
+
+      if (!result.response) {
+        console.error('[DEBUG] No response property in result');
+        throw new Error('Gemini API応答が不正な形式です');
+      }
+
+      const response = result.response;
+      console.log('[DEBUG] Got response object, extracting text');
+      
+      if (typeof response.text !== 'function') {
+        console.error('[DEBUG] response.text is not a function:', typeof response.text);
+        // responseオブジェクトの内容を検査
+        console.log('[DEBUG] Response keys:', Object.keys(response));
+        throw new Error('response.textが関数ではありません');
+      }
+
+      const text = response.text();
+      console.log('[DEBUG] Analysis text length:', text.length);
+      console.log('[DEBUG] Analysis text preview:', text.substring(0, 100) + '...');
+
+      res.status(200).json({
+        keyword,
+        analysis: text,
+        success: true
+      });
+    } catch (apiError) {
+      console.error('[DEBUG] Error in Gemini API call:', apiError);
+      
+      // モックレスポンスでフォールバック
+      console.log('[DEBUG] Falling back to mock response');
+      return res.status(200).json({
+        keyword,
+        analysis: mockAnalysis(keyword),
+        success: true,
+        isFallback: true,
+        error: apiError.message
+      });
     }
-
-    const response = result.response;
-    const text = response.text();
-
-    res.status(200).json({
-      keyword,
-      analysis: text,
-      success: true
-    });
   } catch (error) {
-    console.error('Error analyzing needs:', error);
+    console.error('[DEBUG] Top-level error:', error);
 
     // エラータイプに基づく適切なメッセージ
     let errorMessage = 'ニーズ分析中にエラーが発生しました';
@@ -119,6 +164,19 @@ app.post('/api/analyze-needs', async (req, res) => {
     } else if (error.message?.includes('rate limit')) {
       errorMessage = 'API制限に達しました。しばらく待ってからもう一度お試しください';
       statusCode = 429;
+    }
+
+    // フォールバックとしてモック応答を返す
+    // フロントエンドにフレンドリーなエラーメッセージを提供
+    if (process.env.USE_FALLBACK_ON_ERROR === 'true' || process.env.NODE_ENV === 'development') {
+      console.log('[DEBUG] Using fallback mock response due to error');
+      return res.status(200).json({
+        keyword,
+        analysis: mockAnalysis(keyword),
+        success: true,
+        isFallback: true,
+        originalError: errorMessage
+      });
     }
 
     res.status(statusCode).json({
