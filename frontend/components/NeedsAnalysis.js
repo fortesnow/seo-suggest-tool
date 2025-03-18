@@ -5,14 +5,17 @@ const NeedsAnalysis = ({ keyword }) => {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   const analyzeKeyword = async () => {
     if (!keyword) return;
     
     setLoading(true);
     setError(null);
+    setApiKeyMissing(false);
     
     try {
+      console.log('Analyzing keyword:', keyword);
       const response = await fetch('/api/analyze-needs', {
         method: 'POST',
         headers: {
@@ -21,11 +24,28 @@ const NeedsAnalysis = ({ keyword }) => {
         body: JSON.stringify({ keyword }),
       });
       
+      // レスポンスの詳細をログに出力
+      console.log('API Response status:', response.status);
+      
+      const contentType = response.headers.get('content-type');
+      console.log('Response content type:', contentType);
+      
       if (!response.ok) {
-        throw new Error('分析中にエラーが発生しました');
+        // エラーレスポンスの詳細を取得
+        const errorData = await response.json();
+        console.error('API error details:', errorData);
+        
+        // 環境変数未設定エラーの特殊処理
+        if (response.status === 503 && errorData.suggestion && errorData.suggestion.includes('GEMINI_API_KEY')) {
+          setApiKeyMissing(true);
+          throw new Error('APIキーが設定されていません。管理者に連絡してください。');
+        }
+        
+        throw new Error(errorData.error || '分析中にエラーが発生しました');
       }
       
       const data = await response.json();
+      console.log('Analysis result received:', data);
       setAnalysis(data.analysis);
     } catch (err) {
       console.error('Error analyzing keyword:', err);
@@ -37,7 +57,7 @@ const NeedsAnalysis = ({ keyword }) => {
 
   // 分析結果をセクションに分割する
   const formatAnalysis = (text) => {
-    if (!text) return [];
+    if (!text) return {};
     
     // 改行で分割し、空行や不要な空白を取り除く
     const lines = text.split('\n').filter(line => line.trim());
@@ -56,16 +76,16 @@ const NeedsAnalysis = ({ keyword }) => {
       // セクションのヘッダーを検出
       if (line.includes('顕在ニーズ:')) {
         currentSection = '顕在ニーズ';
-        sections[currentSection] = line.replace('- 顕在ニーズ:', '').trim();
+        sections[currentSection] = line.replace(/^.*顕在ニーズ:/, '').trim();
       } else if (line.includes('潜在ニーズ:')) {
         currentSection = '潜在ニーズ';
-        sections[currentSection] = line.replace('- 潜在ニーズ:', '').trim();
+        sections[currentSection] = line.replace(/^.*潜在ニーズ:/, '').trim();
       } else if (line.includes('ターゲットユーザー:')) {
         currentSection = 'ターゲットユーザー';
-        sections[currentSection] = line.replace('- ターゲットユーザー:', '').trim();
+        sections[currentSection] = line.replace(/^.*ターゲットユーザー:/, '').trim();
       } else if (line.includes('コンテンツ提案:')) {
         currentSection = 'コンテンツ提案';
-        sections[currentSection] = line.replace('- コンテンツ提案:', '').trim();
+        sections[currentSection] = line.replace(/^.*コンテンツ提案:/, '').trim();
       } else if (currentSection) {
         // 現在のセクションに内容を追加
         sections[currentSection] += ' ' + line.trim();
@@ -75,6 +95,18 @@ const NeedsAnalysis = ({ keyword }) => {
     return sections;
   };
 
+  // APIキーがない場合の説明用コンポーネント
+  const ApiKeyMissingInfo = () => (
+    <div className={styles.apiKeyMissing}>
+      <h4>Gemini API機能が無効です</h4>
+      <p>
+        この機能を使用するには、管理者がVercel環境変数に<code>GEMINI_API_KEY</code>を設定する必要があります。
+        <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>
+        でAPIキーを取得し、Vercelプロジェクト設定で環境変数として追加してください。
+      </p>
+    </div>
+  );
+
   return (
     <div className={styles.needsAnalysis}>
       <div className={styles.needsHeader}>
@@ -82,14 +114,19 @@ const NeedsAnalysis = ({ keyword }) => {
         <button 
           className={styles.analyzeButton}
           onClick={analyzeKeyword}
-          disabled={loading || !keyword}
+          disabled={loading || !keyword || apiKeyMissing}
         >
           {loading ? '分析中...' : 'AIで分析'}
         </button>
       </div>
       
-      {error && (
-        <div className={styles.error}>{error}</div>
+      {/* APIキー未設定の場合の警告表示 */}
+      {apiKeyMissing && <ApiKeyMissingInfo />}
+      
+      {error && !apiKeyMissing && (
+        <div className={styles.error}>
+          <p>{error}</p>
+        </div>
       )}
       
       {loading && (
@@ -102,15 +139,17 @@ const NeedsAnalysis = ({ keyword }) => {
       {analysis && !loading && (
         <div className={styles.analysisResults}>
           {Object.entries(formatAnalysis(analysis)).map(([section, content]) => (
-            <div key={section} className={styles.analysisSection}>
-              <h4>{section}</h4>
-              <p>{content || '情報なし'}</p>
-            </div>
+            content ? (
+              <div key={section} className={styles.analysisSection}>
+                <h4>{section}</h4>
+                <p>{content}</p>
+              </div>
+            ) : null
           ))}
         </div>
       )}
       
-      {!analysis && !loading && (
+      {!analysis && !loading && !error && !apiKeyMissing && (
         <div className={styles.placeholder}>
           <p>「AIで分析」ボタンをクリックして、キーワード「{keyword || ''}」のユーザーニーズを分析してください。</p>
         </div>

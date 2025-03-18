@@ -19,20 +19,86 @@ export default function Home() {
     setError(null);
     
     try {
-      const encodedKeyword = encodeURIComponent(searchKeyword.trim());
-      const response = await fetch(`/api/suggestions?keyword=${encodedKeyword}&region=${searchRegion}`);
+      // キーワードを適切にエンコード
+      let normalizedKeyword = searchKeyword.trim();
+      let encodedKeyword = '';
       
-      if (!response.ok) {
-        throw new Error('サーバーからのレスポンスにエラーがありました');
+      // すでにエンコードされている場合はデコードしてから再エンコード（二重エンコードを防止）
+      try {
+        if (normalizedKeyword.includes('%')) {
+          normalizedKeyword = decodeURIComponent(normalizedKeyword);
+        }
+        // 日本語などの非ASCII文字を適切に処理
+        encodedKeyword = encodeURIComponent(normalizedKeyword);
+      } catch (e) {
+        console.error('キーワードエンコード中にエラーが発生しました:', e);
+        encodedKeyword = encodeURIComponent(searchKeyword.trim());
       }
       
+      console.log('検索キーワード:', searchKeyword);
+      console.log('正規化後:', normalizedKeyword);
+      console.log('エンコード後:', encodedKeyword);
+      
+      // 完全なURLを構築（ローカル環境とVercel環境の両方で動作するように）
+      const apiUrl = `${window.location.origin}/api/suggestions?keyword=${encodedKeyword}&region=${searchRegion}`;
+      console.log('API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`サーバーからのレスポンスにエラーがありました (${response.status})`);
+      }
+      
+      // レスポンスヘッダーを確認
+      const contentType = response.headers.get('content-type');
+      console.log('レスポンスタイプ:', contentType);
+      
       const data = await response.json();
+      console.log('検索結果データ:', data);
+      
+      // データ内の文字列を確認してエンコードされているものがあれば修正
+      if (data.suggestions) {
+        data.suggestions = data.suggestions.map(item => ({
+          ...item,
+          keyword: ensureCorrectEncoding(item.keyword)
+        }));
+      }
+      
+      if (data.longTailKeywords) {
+        data.longTailKeywords = data.longTailKeywords.map(item => ({
+          ...item,
+          keyword: ensureCorrectEncoding(item.keyword)
+        }));
+      }
+      
       setResults(data);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setError(err.message || 'キーワード候補の取得中にエラーが発生しました');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // 文字列のエンコーディングを修正する関数
+  const ensureCorrectEncoding = (str) => {
+    if (!str) return '';
+    
+    try {
+      // 文字化けの代表的な文字を検出
+      if (str.includes('\uFFFD') || /%.{2}/.test(str)) {
+        // エンコードされている可能性がある
+        return decodeURIComponent(str);
+      }
+      return str;
+    } catch (e) {
+      console.error('文字列処理エラー:', e);
+      return str;
     }
   };
 

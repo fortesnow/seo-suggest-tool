@@ -1,0 +1,33 @@
+# 依存関係
+node_modules/
+frontend/node_modules/
+/.pnp
+.pnp.js
+
+# テストカバレッジ
+/coverage
+
+# 本番ビルド
+/build
+/dist
+/.next/
+/out/
+
+# 環境変数
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ログ
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# エディタやOS関連
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo 

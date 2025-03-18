@@ -9,6 +9,9 @@ export default async function handler(req, res) {
     // Googleサジェストを取得
     const suggestions = await fetchGoogleSuggestions(keyword, region);
     
+    // ログを追加
+    console.log('Fetched suggestions:', suggestions);
+    
     // 検索ボリュームを追加
     const suggestionsWithVolume = suggestions.map(suggestion => ({
       keyword: suggestion,
@@ -32,16 +35,46 @@ export default async function handler(req, res) {
 
     // レスポンスヘッダーを設定
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.status(200).json({
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // 日本語文字化け防止のための処理
+    const responseData = {
       keyword,
-      suggestions: suggestionsWithVolume,
+      suggestions: suggestionsWithVolume.map(item => ({
+        ...item,
+        keyword: ensureUtf8(item.keyword)
+      })),
       averageSearchVolume,
-      longTailKeywords,
+      longTailKeywords: longTailKeywords.map(item => ({
+        ...item,
+        keyword: ensureUtf8(item.keyword)
+      })),
       longTailAverageSearchVolume
-    });
+    };
+    
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching suggestions:', error);
     res.status(500).json({ error: 'サジェストの取得中にエラーが発生しました' });
+  }
+}
+
+// 文字列がUTF-8エンコーディングであることを確認する関数
+function ensureUtf8(str) {
+  if (!str) return '';
+  
+  try {
+    // 文字列が適切にエンコードされていることを確認
+    if (str.includes('\uFFFD')) {
+      // 文字化けの代表的な文字が含まれている場合、修正を試みる
+      return Buffer.from(str).toString('utf8');
+    }
+    return str;
+  } catch (e) {
+    console.error('String encoding error:', e);
+    return str;
   }
 }
 
@@ -49,7 +82,15 @@ export default async function handler(req, res) {
 async function fetchGoogleSuggestions(keyword, region) {
   try {
     // デコードしてから再エンコードして、二重エンコードを防止
-    const decodedKeyword = decodeURIComponent(keyword);
+    let decodedKeyword = keyword;
+    try {
+      // URLエンコードされている場合はデコード
+      if (keyword.includes('%')) {
+        decodedKeyword = decodeURIComponent(keyword);
+      }
+    } catch (e) {
+      console.error('Error decoding keyword:', e);
+    }
     
     // Google検索のサジェストURL
     // regionに基づいてURLを変更
@@ -64,11 +105,14 @@ async function fetchGoogleSuggestions(keyword, region) {
       hl: region === 'us' ? 'en' : 'ja'
     });
     
+    console.log(`Making request to: ${baseUrl}?${params}`);
+    
     // リクエストを送信
     const response = await fetch(`${baseUrl}?${params}`, {
       headers: {
         'Accept': 'application/json',
-        'Accept-Language': region === 'us' ? 'en-US,en;q=0.9' : 'ja-JP,ja;q=0.9'
+        'Accept-Language': region === 'us' ? 'en-US,en;q=0.9' : 'ja-JP,ja;q=0.9',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
     
@@ -78,9 +122,27 @@ async function fetchGoogleSuggestions(keyword, region) {
     }
     
     const data = await response.json();
+    console.log('Raw API response:', JSON.stringify(data).slice(0, 500)); // 部分的なログ
     
     // 結果の配列を返す（最初の要素はクエリ自体、2番目の要素がサジェスト）
-    return data[1] || [];
+    let suggestions = data[1] || [];
+    
+    // デコードが必要な場合、明示的に処理
+    suggestions = suggestions.map(suggestion => {
+      try {
+        // すでにエンコードされている可能性のある文字列を適切に処理
+        if (suggestion.includes('%')) {
+          return decodeURIComponent(suggestion);
+        }
+        return suggestion;
+      } catch (e) {
+        console.error('Error processing suggestion:', e, suggestion);
+        return suggestion;
+      }
+    });
+    
+    console.log('Processed suggestions:', suggestions);
+    return suggestions;
   } catch (error) {
     console.error('Error fetching Google suggestions:', error);
     return [];
