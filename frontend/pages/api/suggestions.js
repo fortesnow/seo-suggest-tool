@@ -30,6 +30,8 @@ export default async function handler(req, res) {
       ? Math.round(longTailTotalVolume / longTailKeywords.length) 
       : 0;
 
+    // レスポンスヘッダーを設定
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.status(200).json({
       keyword,
       suggestions: suggestionsWithVolume,
@@ -46,6 +48,9 @@ export default async function handler(req, res) {
 // Googleのサジェストキーワードを取得する関数
 async function fetchGoogleSuggestions(keyword, region) {
   try {
+    // デコードしてから再エンコードして、二重エンコードを防止
+    const decodedKeyword = decodeURIComponent(keyword);
+    
     // Google検索のサジェストURL
     // regionに基づいてURLを変更
     const baseUrl = region === 'us' 
@@ -54,13 +59,24 @@ async function fetchGoogleSuggestions(keyword, region) {
     
     // クエリパラメータ
     const params = new URLSearchParams({
-      q: keyword,
+      q: decodedKeyword,
       client: 'firefox',
       hl: region === 'us' ? 'en' : 'ja'
     });
     
     // リクエストを送信
-    const response = await fetch(`${baseUrl}?${params}`);
+    const response = await fetch(`${baseUrl}?${params}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': region === 'us' ? 'en-US,en;q=0.9' : 'ja-JP,ja;q=0.9'
+      }
+    });
+    
+    // レスポンスが正常でない場合
+    if (!response.ok) {
+      throw new Error(`Google API returned ${response.status}: ${response.statusText}`);
+    }
+    
     const data = await response.json();
     
     // 結果の配列を返す（最初の要素はクエリ自体、2番目の要素がサジェスト）

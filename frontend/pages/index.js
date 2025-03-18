@@ -5,6 +5,7 @@ import SearchForm from '../components/SearchForm';
 import SuggestionList from '../components/SuggestionList';
 import styles from '../styles/Home.module.css';
 import Sidebar from '../components/Sidebar';
+import NeedsAnalysis from '../components/NeedsAnalysis';
 
 export default function Home() {
   const [keyword, setKeyword] = useState('');
@@ -18,7 +19,8 @@ export default function Home() {
     setError(null);
     
     try {
-      const response = await fetch(`/api/suggestions?keyword=${encodeURIComponent(searchKeyword)}&region=${searchRegion}`);
+      const encodedKeyword = encodeURIComponent(searchKeyword.trim());
+      const response = await fetch(`/api/suggestions?keyword=${encodedKeyword}&region=${searchRegion}`);
       
       if (!response.ok) {
         throw new Error('サーバーからのレスポンスにエラーがありました');
@@ -84,86 +86,91 @@ export default function Home() {
             </div>
           ) : (
             results && (
-              <div className={styles.results}>
-                <div className={styles.resultSection}>
-                  <div className={styles.resultHeader}>
-                    <h2>Googleサジェスト</h2>
+              <>
+                <div className={styles.results}>
+                  <div className={styles.resultSection}>
+                    <div className={styles.resultHeader}>
+                      <h2>Googleサジェスト</h2>
+                    </div>
+                    <div className={styles.resultBody}>
+                      {results?.suggestions?.length > 0 ? (
+                        <>
+                          <div className={styles.statsRow}>
+                            <div className={styles.statCard}>
+                              <div className={styles.statValue}>{results.suggestions.length}</div>
+                              <div className={styles.statLabel}>提案数</div>
+                            </div>
+                            <div className={styles.statCard}>
+                              <div className={styles.statValue}>{results.averageSearchVolume || "N/A"}</div>
+                              <div className={styles.statLabel}>平均検索ボリューム</div>
+                            </div>
+                          </div>
+                          <ul>
+                            {results.suggestions.map((suggestion, index) => (
+                              <li key={index}>
+                                {suggestion.keyword} 
+                                {suggestion.searchVolume && (
+                                  <span style={{ color: '#666', fontSize: '0.85em', marginLeft: '8px' }}>
+                                    ({suggestion.searchVolume}/月)
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <div className={styles.noResults}>サジェストが見つかりませんでした</div>
+                      )}
+                    </div>
                   </div>
-                  <div className={styles.resultBody}>
-                    {results?.suggestions?.length > 0 ? (
-                      <>
-                        <div className={styles.statsRow}>
-                          <div className={styles.statCard}>
-                            <div className={styles.statValue}>{results.suggestions.length}</div>
-                            <div className={styles.statLabel}>提案数</div>
+
+                  <div className={styles.resultSection}>
+                    <div className={styles.resultHeader}>
+                      <h2>関連ロングテールキーワード</h2>
+                    </div>
+                    <div className={styles.resultBody}>
+                      {results?.longTailKeywords?.length > 0 ? (
+                        <>
+                          <div className={styles.statsRow}>
+                            <div className={styles.statCard}>
+                              <div className={styles.statValue}>{results.longTailKeywords.length}</div>
+                              <div className={styles.statLabel}>提案数</div>
+                            </div>
+                            <div className={styles.statCard}>
+                              <div className={styles.statValue}>{results.longTailAverageSearchVolume || "N/A"}</div>
+                              <div className={styles.statLabel}>平均検索ボリューム</div>
+                            </div>
                           </div>
-                          <div className={styles.statCard}>
-                            <div className={styles.statValue}>{results.averageSearchVolume || "N/A"}</div>
-                            <div className={styles.statLabel}>平均検索ボリューム</div>
-                          </div>
-                        </div>
-                        <ul>
-                          {results.suggestions.map((suggestion, index) => (
-                            <li key={index}>
-                              {suggestion.keyword} 
-                              {suggestion.searchVolume && (
-                                <span style={{ color: '#666', fontSize: '0.85em', marginLeft: '8px' }}>
-                                  ({suggestion.searchVolume}/月)
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    ) : (
-                      <div className={styles.noResults}>サジェストが見つかりませんでした</div>
-                    )}
+                          <ul>
+                            {results.longTailKeywords.map((keyword, index) => (
+                              <li key={index}>
+                                {keyword.keyword}
+                                {keyword.searchVolume && (
+                                  <span style={{ color: '#666', fontSize: '0.85em', marginLeft: '8px' }}>
+                                    ({keyword.searchVolume}/月)
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <div className={styles.noResults}>関連キーワードが見つかりませんでした</div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className={styles.resultSection}>
-                  <div className={styles.resultHeader}>
-                    <h2>関連ロングテールキーワード</h2>
-                  </div>
-                  <div className={styles.resultBody}>
-                    {results?.longTailKeywords?.length > 0 ? (
-                      <>
-                        <div className={styles.statsRow}>
-                          <div className={styles.statCard}>
-                            <div className={styles.statValue}>{results.longTailKeywords.length}</div>
-                            <div className={styles.statLabel}>提案数</div>
-                          </div>
-                          <div className={styles.statCard}>
-                            <div className={styles.statValue}>{results.longTailAverageSearchVolume || "N/A"}</div>
-                            <div className={styles.statLabel}>平均検索ボリューム</div>
-                          </div>
-                        </div>
-                        <ul>
-                          {results.longTailKeywords.map((keyword, index) => (
-                            <li key={index}>
-                              {keyword.keyword}
-                              {keyword.searchVolume && (
-                                <span style={{ color: '#666', fontSize: '0.85em', marginLeft: '8px' }}>
-                                  ({keyword.searchVolume}/月)
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    ) : (
-                      <div className={styles.noResults}>関連キーワードが見つかりませんでした</div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                {/* ニーズ分析セクション */}
+                <NeedsAnalysis keyword={keyword} />
+              </>
             )
           )}
         </div>
       </main>
 
       <footer className={styles.footer}>
-        <p>© 2023 SEOキーワードサジェストツール</p>
+        <p>© 2025 SEOキーワードサジェストツール</p>
       </footer>
     </div>
   );

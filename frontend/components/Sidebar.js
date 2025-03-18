@@ -19,7 +19,7 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
 
   const handleSampleKeywordClick = (sampleKeyword) => {
     setKeyword(sampleKeyword);
-    onSearch(sampleKeyword, region);
+    onSearch(sampleKeyword.trim(), region);
   };
 
   const sampleKeywords = [
@@ -108,7 +108,7 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
       </div>
 
       <div className={styles.sidebarFooter}>
-        © 2023 SEOキーワードサジェストツール
+        © 2025 SEOキーワードサジェストツール
       </div>
     </div>
   );
