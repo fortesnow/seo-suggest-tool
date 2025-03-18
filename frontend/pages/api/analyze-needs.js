@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     // Renderバックエンドへリクエストを転送する
     // 環境に基づいてバックエンドURLを設定
     const backendUrl = process.env.NODE_ENV === 'production'
-      ? 'https://seo-suggest-tool-api.onrender.com/api/analyze-needs'
+      ? 'https://seo-suggest-tool.onrender.com/api/analyze-needs'
       : 'http://localhost:5000/api/analyze-needs';
 
     const response = await fetch(backendUrl, {

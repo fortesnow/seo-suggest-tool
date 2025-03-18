@@ -39,15 +39,15 @@ const nextConfig = {
     const productionRewrites = [
       {
         source: '/api/suggestions',
-        destination: 'https://seo-suggest-tool-api.onrender.com/api/suggestions',
+        destination: 'https://seo-suggest-tool.onrender.com/api/suggestions',
       },
       {
         source: '/api/longtail-suggestions',
-        destination: 'https://seo-suggest-tool-api.onrender.com/api/longtail-suggestions',
+        destination: 'https://seo-suggest-tool.onrender.com/api/longtail-suggestions',
       },
       {
         source: '/api/yahoo-suggestions',
-        destination: 'https://seo-suggest-tool-api.onrender.com/api/yahoo-suggestions',
+        destination: 'https://seo-suggest-tool.onrender.com/api/yahoo-suggestions',
       },
     ];
     
