@@ -67,7 +67,8 @@ app.post('/api/analyze-needs', async (req, res) => {
     // Gemini APIを使用してニーズ分析
     try {
       console.log('[DEBUG] Creating Gemini model instance');
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      // 最新バージョンのGemini APIライブラリに対応したモデル名を使用
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
       
       const prompt = `
       以下のキーワードについて、SEO視点から潜在ニーズと顕在ニーズを分析してください:
@@ -91,9 +92,15 @@ app.post('/api/analyze-needs', async (req, res) => {
         setTimeout(() => reject(new Error('API request timeout')), 15000);
       });
 
-      // Gemini APIリクエストを実行
+      // Gemini APIリクエストを実行（最新バージョンのAPIに合わせて修正）
       const result = await Promise.race([
-        model.generateContent(prompt).catch(e => {
+        model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+          },
+        }).catch(e => {
           console.error('[DEBUG] Gemini API generateContent error:', e);
           console.error('[DEBUG] Error name:', e.name);
           console.error('[DEBUG] Error message:', e.message);
@@ -109,24 +116,27 @@ app.post('/api/analyze-needs', async (req, res) => {
         throw new Error('Gemini APIからの応答が空です');
       }
 
-      console.log('[DEBUG] Response object:', JSON.stringify(result).substring(0, 200) + '...');
+      console.log('[DEBUG] Response object structure:', Object.keys(result));
 
-      if (!result.response) {
-        console.error('[DEBUG] No response property in result');
-        throw new Error('Gemini API応答が不正な形式です');
+      // レスポンス処理を最新バージョンのAPI形式に更新
+      let text = '';
+      if (result.response && result.response.text) {
+        // 古いバージョンの形式
+        text = result.response.text();
+      } else if (result.candidates && result.candidates.length > 0) {
+        // 新しいバージョンの形式
+        const content = result.candidates[0].content;
+        if (content && content.parts && content.parts.length > 0) {
+          text = content.parts[0].text;
+        }
       }
 
-      const response = result.response;
-      console.log('[DEBUG] Got response object, extracting text');
-      
-      if (typeof response.text !== 'function') {
-        console.error('[DEBUG] response.text is not a function:', typeof response.text);
-        // responseオブジェクトの内容を検査
-        console.log('[DEBUG] Response keys:', Object.keys(response));
-        throw new Error('response.textが関数ではありません');
+      if (!text) {
+        console.error('[DEBUG] Could not extract text from response');
+        console.log('[DEBUG] Full response:', JSON.stringify(result).substring(0, 500));
+        throw new Error('レスポンステキストの抽出に失敗しました');
       }
 
-      const text = response.text();
       console.log('[DEBUG] Analysis text length:', text.length);
       console.log('[DEBUG] Analysis text preview:', text.substring(0, 100) + '...');
 
