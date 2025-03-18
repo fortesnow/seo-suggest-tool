@@ -67,8 +67,8 @@ app.post('/api/analyze-needs', async (req, res) => {
     // Gemini APIを使用してニーズ分析
     try {
       console.log('[DEBUG] Creating Gemini model instance');
-      // 最新バージョンのGemini APIライブラリに対応したモデル名を使用
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+      // 正しいGemini APIモデル名に更新
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       
       const prompt = `
       以下のキーワードについて、SEO視点から潜在ニーズと顕在ニーズを分析してください:
