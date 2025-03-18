@@ -51,9 +51,15 @@ const NeedsAnalysis = ({ keyword }) => {
       
       const data = await response.json();
       
-      // レスポンスデータをログに記録
-      console.log('Analysis result received:', 
-        data.analysis ? `${data.analysis.substring(0, 50)}...` : 'No analysis');
+      // デバッグ用：レスポンスデータの構造を詳細に記録
+      console.log('Analysis result received. Data type:', typeof data);
+      console.log('Data structure:', JSON.stringify(data).substring(0, 100) + '...');
+      if (data.analysis) {
+        console.log('Analysis type:', typeof data.analysis);
+        console.log('Analysis preview:', typeof data.analysis === 'string' 
+          ? data.analysis.substring(0, 50) + '...' 
+          : 'Not a string');
+      }
       
       if (data.success === false) {
         throw new Error(data.error || 'キーワード分析に失敗しました');
@@ -69,8 +75,31 @@ const NeedsAnalysis = ({ keyword }) => {
   };
 
   // 分析結果をセクションに分割する
-  const formatAnalysis = (text) => {
-    if (!text) return {};
+  const formatAnalysis = (analysisData) => {
+    if (!analysisData) return {};
+    
+    // 返されたデータの形式を確認
+    // analysisDataがオブジェクトの場合、そのanalysisプロパティを取得
+    let text = '';
+    
+    if (typeof analysisData === 'object') {
+      // analysisDataがオブジェクトの場合（バックエンドからの直接レスポンス）
+      text = analysisData.analysis;
+    } else {
+      // 既に文字列の場合（レガシーフォーマット向け）
+      text = analysisData;
+    }
+    
+    // textが文字列でない場合、空のオブジェクトを返す
+    if (typeof text !== 'string') {
+      console.error('Analysis text is not a string:', typeof text, text);
+      return {
+        顕在ニーズ: '分析結果の形式が不正です',
+        潜在ニーズ: '',
+        ターゲットユーザー: '',
+        コンテンツ提案: ''
+      };
+    }
     
     // 改行で分割し、空行や不要な空白を取り除く
     const lines = text.split('\n').filter(line => line.trim());
