@@ -171,10 +171,10 @@ function generateLongTailKeywords(baseKeyword, suggestions) {
   for (const suggestion of suggestions) {
     const suggestedKeyword = suggestion.keyword;
     
-    // 単語数をカウント
-    const wordCount = suggestedKeyword.split(' ').length;
+    // 単語数をカウント（空白で分割）
+    const wordCount = suggestedKeyword.split(/\s+/).length;
     
-    // 3語以上のキーワードと、base keywordとは異なるものを抽出
+    // 3語以上のキーワードと、base keywordとは異なるものを抽出（2語から3語以上に変更）
     if (wordCount >= 3 && suggestedKeyword !== baseKeyword) {
       longTailSuggestions.push({
         keyword: suggestedKeyword,
@@ -183,17 +183,24 @@ function generateLongTailKeywords(baseKeyword, suggestions) {
     }
   }
   
-  // 組み合わせからロングテールを生成
-  const commonPhrases = ['方法', 'やり方', 'とは', '違い', '比較', 'おすすめ', '使い方', '意味'];
-  
-  for (const phrase of commonPhrases) {
-    if (longTailSuggestions.length >= 15) break; // 最大15件に制限
+  // 既存のサジェストから十分なロングテールキーワードが得られない場合、生成する
+  if (longTailSuggestions.length < 5) {
+    // 組み合わせからロングテールを生成
+    const commonPhrases = ['方法 おすすめ', 'やり方 簡単', 'とは 意味 解説', '違い 比較 ポイント', 'おすすめ 人気 ランキング', '使い方 初心者', '意味 例文'];
     
-    const newKeyword = `${baseKeyword} ${phrase}`;
-    longTailSuggestions.push({
-      keyword: newKeyword,
-      searchVolume: generateSearchVolume(newKeyword)
-    });
+    for (const phrase of commonPhrases) {
+      if (longTailSuggestions.length >= 15) break; // 最大15件に制限
+      
+      const newKeyword = `${baseKeyword} ${phrase}`;
+      // 単語数が3つ以上あることを確認
+      const wordCount = newKeyword.split(/\s+/).length;
+      if (wordCount >= 3) {
+        longTailSuggestions.push({
+          keyword: newKeyword,
+          searchVolume: generateSearchVolume(newKeyword)
+        });
+      }
+    }
   }
   
   return longTailSuggestions;

@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../styles/NeedsAnalysis.module.css';
 
-const NeedsAnalysis = ({ keyword }) => {
+const NeedsAnalysis = ({ keyword, autoAnalyze = false }) => {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
+
+  // キーワードが変更されたり、autoAnalyzeがtrueになったりした時に自動分析
+  useEffect(() => {
+    if (autoAnalyze && keyword) {
+      analyzeKeyword();
+    }
+  }, [keyword, autoAnalyze]);
 
   const analyzeKeyword = async () => {
     if (!keyword) return;

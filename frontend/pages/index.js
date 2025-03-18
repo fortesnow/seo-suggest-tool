@@ -13,6 +13,8 @@ export default function Home() {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedKeyword, setSelectedKeyword] = useState('');
+  const [analyzeMode, setAnalyzeMode] = useState(false);
 
   const fetchSuggestions = async (searchKeyword, searchRegion) => {
     setLoading(true);
@@ -102,141 +104,90 @@ export default function Home() {
     }
   };
 
-  const handleSearch = (searchKeyword, searchRegion) => {
-    if (!searchKeyword.trim()) return;
+  // キーワードが選択されたときのハンドラー
+  const handleKeywordSelect = (keyword, shouldAnalyze = false) => {
+    console.log(`Selected keyword: ${keyword}, analyze: ${shouldAnalyze}`);
+    setSelectedKeyword(keyword);
     
-    setKeyword(searchKeyword);
-    setRegion(searchRegion);
-    fetchSuggestions(searchKeyword, searchRegion);
-  };
-
-  // サンプルキーワードのクリックハンドラ
-  const handleSampleKeywordClick = (sampleKeyword) => {
-    setKeyword(sampleKeyword);
-    fetchSuggestions(sampleKeyword, region);
+    // 分析モードフラグを設定
+    setAnalyzeMode(shouldAnalyze);
+    
+    // 分析モードでなければ、そのキーワードで検索を実行
+    if (!shouldAnalyze) {
+      setKeyword(keyword);
+      fetchSuggestions(keyword, region);
+    }
+    
+    // キーワード分析セクションへスクロール
+    if (shouldAnalyze) {
+      setTimeout(() => {
+        const needsAnalysisSection = document.getElementById('needs-analysis-section');
+        if (needsAnalysisSection) {
+          needsAnalysisSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
   };
 
   return (
     <div className={styles.container}>
       <Head>
-        <title>SEOキーワードサジェストツール</title>
-        <meta name="description" content="Googleのサジェストキーワードを取得するツール" />
+        <title>SEO検索サジェストツール</title>
+        <meta name="description" content="SEO検索サジェストツール - キーワード候補を素早く見つける" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Sidebar 
-        onSearch={handleSearch} 
-        initialKeyword={keyword}
-        initialRegion={region}
-      />
-
       <main className={styles.main}>
-        <div className={styles.mainContent}>
-          <div className={styles.header}>
-            <h1 className={styles.title}>SEOキーワードサジェストツール</h1>
-            <p className={styles.description}>
-              検索キーワードを入力して、潜在的なSEOキーワードを見つけましょう
-            </p>
+        <div className={styles.layout}>
+          <Sidebar />
+          
+          <div className={styles.content}>
+            <h1 className={styles.title}>
+              SEO<span className={styles.highlight}>検索サジェスト</span>ツール
+            </h1>
+            
+            <SearchForm 
+              keyword={keyword}
+              setKeyword={setKeyword}
+              region={region}
+              setRegion={setRegion}
+              onSearch={fetchSuggestions}
+            />
+            
+            {error && (
+              <div className={styles.error}>
+                <p>エラー: {error}</p>
+              </div>
+            )}
+            
+            {loading ? (
+              <div className={styles.loading}>
+                <div className={styles.spinner}></div>
+                <p>キーワード候補を取得中...</p>
+              </div>
+            ) : (
+              results && (
+                <>
+                  <SuggestionList 
+                    results={results}
+                    onKeywordSelect={handleKeywordSelect}
+                  />
+                  
+                  <div id="needs-analysis-section">
+                    <NeedsAnalysis 
+                      keyword={analyzeMode ? selectedKeyword : keyword}
+                      autoAnalyze={analyzeMode}
+                    />
+                  </div>
+                </>
+              )
+            )}
           </div>
-
-          {error && (
-            <div className={styles.error}>
-              <p>{error}</p>
-            </div>
-          )}
-
-          {loading ? (
-            <div className={styles.loading}>
-              <div className={styles.loadingSpinner}></div>
-              <span>キーワード候補を取得中...</span>
-            </div>
-          ) : (
-            results && (
-              <>
-                <div className={styles.results}>
-                  <div className={styles.resultSection}>
-                    <div className={styles.resultHeader}>
-                      <h2>Googleサジェスト</h2>
-                    </div>
-                    <div className={styles.resultBody}>
-                      {results?.suggestions?.length > 0 ? (
-                        <>
-                          <div className={styles.statsRow}>
-                            <div className={styles.statCard}>
-                              <div className={styles.statValue}>{results.suggestions.length}</div>
-                              <div className={styles.statLabel}>提案数</div>
-                            </div>
-                            <div className={styles.statCard}>
-                              <div className={styles.statValue}>{results.averageSearchVolume || "N/A"}</div>
-                              <div className={styles.statLabel}>平均検索ボリューム</div>
-                            </div>
-                          </div>
-                          <ul>
-                            {results.suggestions.map((suggestion, index) => (
-                              <li key={index}>
-                                {suggestion.keyword} 
-                                {suggestion.searchVolume && (
-                                  <span style={{ color: '#666', fontSize: '0.85em', marginLeft: '8px' }}>
-                                    ({suggestion.searchVolume}/月)
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      ) : (
-                        <div className={styles.noResults}>サジェストが見つかりませんでした</div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className={styles.resultSection}>
-                    <div className={styles.resultHeader}>
-                      <h2>関連ロングテールキーワード</h2>
-                    </div>
-                    <div className={styles.resultBody}>
-                      {results?.longTailKeywords?.length > 0 ? (
-                        <>
-                          <div className={styles.statsRow}>
-                            <div className={styles.statCard}>
-                              <div className={styles.statValue}>{results.longTailKeywords.length}</div>
-                              <div className={styles.statLabel}>提案数</div>
-                            </div>
-                            <div className={styles.statCard}>
-                              <div className={styles.statValue}>{results.longTailAverageSearchVolume || "N/A"}</div>
-                              <div className={styles.statLabel}>平均検索ボリューム</div>
-                            </div>
-                          </div>
-                          <ul>
-                            {results.longTailKeywords.map((keyword, index) => (
-                              <li key={index}>
-                                {keyword.keyword}
-                                {keyword.searchVolume && (
-                                  <span style={{ color: '#666', fontSize: '0.85em', marginLeft: '8px' }}>
-                                    ({keyword.searchVolume}/月)
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </>
-                      ) : (
-                        <div className={styles.noResults}>関連キーワードが見つかりませんでした</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ニーズ分析セクション */}
-                <NeedsAnalysis keyword={keyword} />
-              </>
-            )
-          )}
         </div>
       </main>
 
       <footer className={styles.footer}>
-        <p>© 2025 SEOキーワードサジェストツール</p>
+        <p>© {new Date().getFullYear()} SEO検索サジェストツール All rights reserved.</p>
       </footer>
     </div>
   );
