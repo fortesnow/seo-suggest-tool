@@ -33,12 +33,46 @@ const nextConfig = {
   },
   // APIエンドポイントのリワイト
   async rewrites() {
-    return [
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // プロダクション環境ではRenderのバックエンドAPIを使用
+    const productionRewrites = [
       {
-        source: '/api/:path*',
-        destination: '/api/:path*',
+        source: '/api/suggestions',
+        destination: 'https://seo-suggest-tool-api.onrender.com/api/suggestions',
       },
-    ]
+      {
+        source: '/api/longtail-suggestions',
+        destination: 'https://seo-suggest-tool-api.onrender.com/api/longtail-suggestions',
+      },
+      {
+        source: '/api/yahoo-suggestions',
+        destination: 'https://seo-suggest-tool-api.onrender.com/api/yahoo-suggestions',
+      },
+    ];
+    
+    // 開発環境ではローカルのAPIを使用
+    const devRewrites = [
+      {
+        source: '/api/suggestions',
+        destination: 'http://localhost:5000/api/suggestions',
+      },
+      {
+        source: '/api/longtail-suggestions',
+        destination: 'http://localhost:5000/api/longtail-suggestions',
+      },
+      {
+        source: '/api/yahoo-suggestions',
+        destination: 'http://localhost:5000/api/yahoo-suggestions',
+      },
+    ];
+    
+    return isProduction ? productionRewrites : devRewrites;
+  },
+  // APIルートのエラーハンドリングを改善
+  onDemandEntries: {
+    maxInactiveAge: 60 * 60 * 1000, // 1時間
+    pagesBufferLength: 5,
   },
 }
 

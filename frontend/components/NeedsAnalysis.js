@@ -12,11 +12,13 @@ const NeedsAnalysis = ({ keyword }) => {
     
     setLoading(true);
     setError(null);
-    setApiKeyMissing(false);
+    setAnalysis(null);
     
     try {
-      console.log('Analyzing keyword:', keyword);
-      const response = await fetch('/api/analyze-needs', {
+      const apiUrl = `/api/analyze-needs`;
+      console.log(`Sending analysis request to: ${apiUrl}`);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -24,32 +26,43 @@ const NeedsAnalysis = ({ keyword }) => {
         body: JSON.stringify({ keyword }),
       });
       
-      // レスポンスの詳細をログに出力
+      // APIのレスポンスをログに記録（デバッグ用）
       console.log('API Response status:', response.status);
+      console.log('Response content type:', response.headers.get('content-type'));
       
-      const contentType = response.headers.get('content-type');
-      console.log('Response content type:', contentType);
-      
+      // レスポンスが正常でない場合
       if (!response.ok) {
-        // エラーレスポンスの詳細を取得
-        const errorData = await response.json();
-        console.error('API error details:', errorData);
-        
-        // 環境変数未設定エラーの特殊処理
-        if (response.status === 503 && errorData.suggestion && errorData.suggestion.includes('GEMINI_API_KEY')) {
-          setApiKeyMissing(true);
-          throw new Error('APIキーが設定されていません。管理者に連絡してください。');
+        let errorData = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error('Error parsing error response:', e);
         }
         
-        throw new Error(errorData.error || '分析中にエラーが発生しました');
+        console.log('API error details:', errorData);
+        
+        // APIキーが設定されていないというエラーの場合は特別な処理
+        if (errorData.apiKeySet === false) {
+          setApiKeyMissing(false);  // Renderバックエンドに移行したので不要
+        }
+        
+        throw new Error(errorData.error || `サーバーエラー (${response.status})`);
       }
       
       const data = await response.json();
-      console.log('Analysis result received:', data);
-      setAnalysis(data.analysis);
-    } catch (err) {
-      console.error('Error analyzing keyword:', err);
-      setError(err.message || '分析中にエラーが発生しました');
+      
+      // レスポンスデータをログに記録
+      console.log('Analysis result received:', 
+        data.analysis ? `${data.analysis.substring(0, 50)}...` : 'No analysis');
+      
+      if (data.success === false) {
+        throw new Error(data.error || 'キーワード分析に失敗しました');
+      }
+      
+      setAnalysis(data);
+    } catch (error) {
+      console.error('Error analyzing keyword:', error);
+      setError(error.message);
     } finally {
       setLoading(false);
     }
