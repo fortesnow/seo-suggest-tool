@@ -4,12 +4,35 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 // Vercel環境でも環境変数を正しく取得できるようにする
 const API_KEY = process.env.GEMINI_API_KEY || '';
 
+// デバッグ用にAPI KEY長さのログを出力（セキュリティのためにキー自体は表示しない）
+console.log(`[DEBUG] API_KEY exists: ${Boolean(API_KEY)}, length: ${API_KEY ? API_KEY.length : 0}`);
+
 if (!API_KEY) {
   console.warn('警告: GEMINI_API_KEY環境変数が設定されていません。Gemini APIは動作しません。');
 }
 
 // Gemini APIの初期化（APIキーがある場合のみ）
-const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
+let genAI = null;
+try {
+  if (API_KEY) {
+    genAI = new GoogleGenerativeAI(API_KEY);
+    console.log('Gemini API client initialized successfully');
+  }
+} catch (e) {
+  console.error('Failed to initialize Gemini API client:', e);
+}
+
+// モック応答（APIキーが機能しない場合のフォールバック）
+const mockAnalysis = {
+  generateMockResponse: (keyword) => {
+    return `
+- 顕在ニーズ: "${keyword}"に関する情報や解決策の探索
+- 潜在ニーズ: 時間や手間の節約、専門知識へのアクセス、自信を持って決断するための情報収集
+- ターゲットユーザー: ${keyword}について知識を深めたい初心者から中級者、具体的な問題解決を求めるユーザー
+- コンテンツ提案: ハウツーガイド、チュートリアル、事例紹介、比較記事、FAQ、基本概念の解説
+`;
+  }
+};
 
 export default async function handler(req, res) {
   // CORS設定
@@ -42,6 +65,23 @@ export default async function handler(req, res) {
   // APIキーが設定されていない場合
   if (!API_KEY || !genAI) {
     console.error('Gemini API key is missing or invalid');
+    
+    // 開発環境またはデモモードの場合、モック応答を返す
+    if (process.env.NODE_ENV === 'development' || process.env.USE_MOCK_RESPONSES === 'true') {
+      console.log('Using mock response for keyword:', keyword);
+      const mockResponse = mockAnalysis.generateMockResponse(keyword);
+      
+      // 正しいレスポンスヘッダーを設定
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      
+      return res.status(200).json({
+        keyword,
+        analysis: mockResponse,
+        success: true,
+        isMock: true
+      });
+    }
+    
     return res.status(503).json({ 
       error: 'Gemini APIサービスは現在利用できません',
       suggestion: '環境変数 GEMINI_API_KEY を設定してください',
@@ -51,9 +91,13 @@ export default async function handler(req, res) {
 
   try {
     console.log(`Analyzing keyword: "${keyword}" with Gemini API`);
+    console.log(`API Key exists: ${Boolean(API_KEY)} (length: ${API_KEY ? API_KEY.length : 0})`);
     
     // Gemini APIを使用してニーズ分析
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    
+    // デバッグ用にモデル情報を出力
+    console.log('Using model: gemini-pro');
     
     const prompt = `
     以下のキーワードについて、SEO視点から潜在ニーズと顕在ニーズを分析してください:
@@ -69,14 +113,26 @@ export default async function handler(req, res) {
     簡潔に、箇条書きで各項目100文字以内で回答してください。
     `;
     
+    // プロンプトの長さをログに記録
+    console.log(`Prompt length: ${prompt.length} characters`);
+    
     // 安全装置として、10秒のタイムアウトを設定
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('API request timeout')), 10000);
     });
     
+    console.log('Sending request to Gemini API...');
+    
     // Gemini APIリクエストを実行
     const result = await Promise.race([
-      model.generateContent(prompt),
+      model.generateContent(prompt).catch(e => {
+        // APIリクエスト自体のエラーを詳細に記録
+        console.error('Detailed API error:', e);
+        console.error('Error name:', e.name);
+        console.error('Error status:', e.status);
+        console.error('Full error message:', e.message);
+        throw e;
+      }),
       timeoutPromise
     ]);
     
@@ -116,6 +172,23 @@ export default async function handler(req, res) {
     } else if (error.name === 'AbortError') {
       errorMessage = 'リクエストがキャンセルされました';
       statusCode = 499;
+    }
+    
+    // API接続エラーの場合、フォールバックレスポンスを返す
+    if (process.env.USE_FALLBACK_ON_ERROR === 'true' || process.env.NODE_ENV === 'development') {
+      console.log('Using fallback response for keyword after error:', keyword);
+      const mockResponse = mockAnalysis.generateMockResponse(keyword);
+      
+      // 正しいレスポンスヘッダーを設定
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      
+      return res.status(200).json({
+        keyword,
+        analysis: mockResponse,
+        success: true,
+        isFallback: true,
+        originalError: errorMessage
+      });
     }
     
     res.status(statusCode).json({ 

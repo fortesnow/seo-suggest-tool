@@ -126,6 +126,10 @@ const NeedsAnalysis = ({ keyword }) => {
       {error && !apiKeyMissing && (
         <div className={styles.error}>
           <p>{error}</p>
+          <p className={styles.fallbackNote}>
+            <strong>代替策:</strong> Vercel環境でGemini APIキーを設定するか、
+            一時的なデモ表示としてモックデータを使用できます。
+          </p>
         </div>
       )}
       
@@ -138,6 +142,15 @@ const NeedsAnalysis = ({ keyword }) => {
       
       {analysis && !loading && (
         <div className={styles.analysisResults}>
+          {analysis.isMock || analysis.isFallback ? (
+            <div className={styles.mockNotice}>
+              <p>※ この結果はデモ表示です。実際のAI分析ではありません。</p>
+              {analysis.originalError && (
+                <p className={styles.errorInfo}>元のエラー: {analysis.originalError}</p>
+              )}
+            </div>
+          ) : null}
+          
           {Object.entries(formatAnalysis(analysis)).map(([section, content]) => (
             content ? (
               <div key={section} className={styles.analysisSection}>
