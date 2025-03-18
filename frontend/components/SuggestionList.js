@@ -3,6 +3,8 @@ import styles from '../styles/SuggestionList.module.css';
 
 const SuggestionList = ({ results, onKeywordSelect }) => {
   const [activeTab, setActiveTab] = useState('suggestions');
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  const [showAllLongTail, setShowAllLongTail] = useState(false);
   
   // 表示する結果がない場合
   if (!results) return null;
@@ -17,6 +19,15 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
       </div>
     );
   }
+
+  // 表示件数を制限（デフォルトは10件）
+  const displaySuggestions = showAllSuggestions 
+    ? suggestions 
+    : suggestions.slice(0, 10);
+    
+  const displayLongTail = showAllLongTail 
+    ? longTailKeywords 
+    : longTailKeywords.slice(0, 10);
   
   // キーワードをクリックしたときの処理
   const handleKeywordClick = (keyword) => {
@@ -43,12 +54,14 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
           className={`${styles.tab} ${activeTab === 'suggestions' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('suggestions')}
         >
+          <span className={styles.tabIcon}>✦</span>
           サジェスト ({suggestions.length})
         </button>
         <button 
           className={`${styles.tab} ${activeTab === 'longTail' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('longTail')}
         >
+          <span className={styles.tabIcon}>✧</span>
           ロングテール ({longTailKeywords.length})
         </button>
       </div>
@@ -56,14 +69,19 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
       <div className={styles.tabContent}>
         {activeTab === 'suggestions' ? (
           <>
-            <p className={styles.explanation}>
-              よく検索されるキーワード候補です。クリックして検索できます。
-              <span className={styles.averageVolume}>
-                平均検索ボリューム: {results.averageSearchVolume?.toLocaleString() || '不明'}
-              </span>
-            </p>
+            <div className={styles.explanationContainer}>
+              <p className={styles.explanation}>
+                よく検索されるキーワード候補です。クリックして検索できます。
+                <span className={styles.averageVolume}>
+                  平均検索ボリューム: {results.averageSearchVolume?.toLocaleString() || '不明'}
+                </span>
+              </p>
+              <div className={styles.toolBar}>
+                <span className={styles.resultCount}>{displaySuggestions.length}件表示 / 全{suggestions.length}件</span>
+              </div>
+            </div>
             <ul className={styles.keywords}>
-              {suggestions.map((item, index) => (
+              {displaySuggestions.map((item, index) => (
                 <li 
                   key={index}
                   className={styles.keywordItem}
@@ -85,17 +103,32 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
                 </li>
               ))}
             </ul>
+            {suggestions.length > 10 && (
+              <div className={styles.showMoreContainer}>
+                <button 
+                  className={styles.showMoreButton}
+                  onClick={() => setShowAllSuggestions(!showAllSuggestions)}
+                >
+                  {showAllSuggestions ? '表示を減らす ↑' : 'すべて表示 ↓'}
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <>
-            <p className={styles.explanation}>
-              より具体的なロングテールキーワードの候補です。
-              <span className={styles.averageVolume}>
-                平均検索ボリューム: {results.longTailAverageSearchVolume?.toLocaleString() || '不明'}
-              </span>
-            </p>
+            <div className={styles.explanationContainer}>
+              <p className={styles.explanation}>
+                より具体的なロングテールキーワードの候補です。
+                <span className={styles.averageVolume}>
+                  平均検索ボリューム: {results.longTailAverageSearchVolume?.toLocaleString() || '不明'}
+                </span>
+              </p>
+              <div className={styles.toolBar}>
+                <span className={styles.resultCount}>{displayLongTail.length}件表示 / 全{longTailKeywords.length}件</span>
+              </div>
+            </div>
             <ul className={styles.keywords}>
-              {longTailKeywords.map((item, index) => (
+              {displayLongTail.map((item, index) => (
                 <li 
                   key={index} 
                   className={styles.keywordItem}
@@ -117,6 +150,16 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
                 </li>
               ))}
             </ul>
+            {longTailKeywords.length > 10 && (
+              <div className={styles.showMoreContainer}>
+                <button 
+                  className={styles.showMoreButton}
+                  onClick={() => setShowAllLongTail(!showAllLongTail)}
+                >
+                  {showAllLongTail ? '表示を減らす ↑' : 'すべて表示 ↓'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

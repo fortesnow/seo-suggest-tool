@@ -15,10 +15,19 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [selectedKeyword, setSelectedKeyword] = useState('');
   const [analyzeMode, setAnalyzeMode] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // モバイルメニューの切り替え
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
 
   const fetchSuggestions = async (searchKeyword, searchRegion) => {
     setLoading(true);
     setError(null);
+    
+    // モバイル表示の場合、サイドバーを閉じる
+    setIsMobileMenuOpen(false);
     
     try {
       // キーワードを適切にエンコード
@@ -79,6 +88,9 @@ export default function Home() {
       }
       
       setResults(data);
+      // 検索後に選択キーワードを更新
+      setKeyword(searchKeyword);
+      setRegion(searchRegion);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setError(err.message || 'キーワード候補の取得中にエラーが発生しました');
@@ -137,9 +149,23 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
+      <button 
+        className={styles.mobileMenuToggle} 
+        onClick={toggleMobileMenu}
+        aria-label="メニューを開く"
+      >
+        <span className={styles.hamburger}></span>
+      </button>
+
       <main className={styles.main}>
-        <div className={styles.layout}>
-          <Sidebar />
+        <div className={`${styles.layout} ${isMobileMenuOpen ? styles.sidebarOpen : ''}`}>
+          <div className={styles.sidebarContainer}>
+            <Sidebar 
+              onSearch={fetchSuggestions} 
+              initialKeyword={keyword} 
+              initialRegion={region}
+            />
+          </div>
           
           <div className={styles.content}>
             <h1 className={styles.title}>

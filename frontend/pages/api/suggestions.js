@@ -12,8 +12,8 @@ export default async function handler(req, res) {
     // ログを追加
     console.log('Fetched suggestions:', suggestions);
     
-    // 検索ボリュームを追加
-    const suggestionsWithVolume = suggestions.map(suggestion => ({
+    // 検索ボリュームを追加（最大10件に制限）
+    const suggestionsWithVolume = suggestions.slice(0, 10).map(suggestion => ({
       keyword: suggestion,
       searchVolume: generateSearchVolume(suggestion)
     }));
@@ -24,8 +24,8 @@ export default async function handler(req, res) {
       ? Math.round(totalVolume / suggestionsWithVolume.length) 
       : 0;
     
-    // ロングテールキーワードの生成
-    const longTailKeywords = generateLongTailKeywords(keyword, suggestionsWithVolume);
+    // ロングテールキーワードの生成（最大10件に制限）
+    const longTailKeywords = generateLongTailKeywords(keyword, suggestionsWithVolume).slice(0, 10);
     
     // ロングテールキーワードの平均検索ボリュームを計算
     const longTailTotalVolume = longTailKeywords.reduce((sum, item) => sum + item.searchVolume, 0);
