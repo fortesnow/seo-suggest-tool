@@ -200,6 +200,96 @@ app.post('/api/analyze-needs', async (req, res) => {
   }
 });
 
+// Googleサジェスト取得エンドポイント
+app.get('/api/google-suggestions', async (req, res) => {
+  try {
+    const { keyword, region = 'jp' } = req.query;
+    
+    if (!keyword) {
+      return res.status(400).json({ error: 'キーワードが必要です' });
+    }
+    
+    console.log(`[SERVER] Google検索サジェスト取得: ${keyword}, region: ${region}`);
+    
+    // Googleサジェストを取得するシンプルな関数
+    const suggestions = await fetchGoogleSuggestions(keyword, region);
+    
+    // 検索ボリュームをモックデータとして追加
+    const suggestionsWithVolume = suggestions.map(suggestion => ({
+      keyword: suggestion,
+      volume: Math.floor(Math.random() * 1000) + 100
+    }));
+    
+    res.status(200).json({ 
+      suggestions: suggestionsWithVolume,
+      success: true
+    });
+  } catch (error) {
+    console.error('サジェスト取得エラー:', error);
+    res.status(500).json({ 
+      error: 'サジェストの取得に失敗しました', 
+      message: error.message
+    });
+  }
+});
+
+// Google検索サジェストを取得する関数
+async function fetchGoogleSuggestions(keyword, region = 'jp') {
+  try {
+    // Google Autocomplete APIのURL
+    const googleUrl = region === 'us' 
+      ? 'https://www.google.com/complete/search'
+      : `https://www.google.${region}/complete/search`;
+    
+    // リクエストパラメータ
+    const params = new URLSearchParams({
+      q: keyword,
+      client: 'gws-wiz',
+      xssi: 't',
+      hl: region === 'jp' ? 'ja' : 'en'
+    });
+    
+    // リクエスト送信
+    const response = await axios.get(`${googleUrl}?${params.toString()}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01'
+      }
+    });
+    
+    // レスポンスデータの処理
+    let data = response.data;
+    
+    // Google APIのレスポンスから余分なプレフィックスを削除
+    if (typeof data === 'string' && data.startsWith(")]}'")) {
+      data = data.substring(4);
+    }
+    
+    // JSONとしてパース
+    const parsedData = JSON.parse(data);
+    
+    // サジェストの抽出
+    // Google API構造: [入力キーワード, [サジェスト配列], {...}, {...}]
+    if (Array.isArray(parsedData) && Array.isArray(parsedData[1])) {
+      // サジェスト配列から実際のテキストを抽出
+      return parsedData[1].map(item => {
+        // 各項目は[サジェストテキスト, 説明, ...] の形式
+        if (Array.isArray(item)) {
+          // HTMLタグを削除
+          const text = item[0].replace(/<\/?[^>]+(>|$)/g, '');
+          return text;
+        }
+        return '';
+      }).filter(Boolean); // 空の文字列を除外
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Google Suggestions取得エラー:', error);
+    return []; // エラー時は空配列を返す
+  }
+}
+
 // Googleサジェストキーワード取得エンドポイント
 app.get('/api/suggestions', async (req, res) => {
   try {

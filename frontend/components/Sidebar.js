@@ -77,14 +77,6 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggesti
       console.error('検索履歴の削除に失敗しました:', error);
     }
   };
-
-  // 最近の検索キーワード（仮のデータ）
-  const recentSearches = [
-    'SEO 対策',
-    'Web マーケティング',
-    'コンテンツ SEO',
-    'キーワード 選定'
-  ];
   
   // よく検索されるキーワード（仮のデータ）
   const popularKeywords = [
@@ -146,23 +138,33 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggesti
         </div>
       )}
       
+      {/* 検索履歴セクション */}
       <div className={styles.sidebarSection}>
-        <h3 className={styles.sidebarTitle}>最近の検索</h3>
-        <ul className={styles.keywordList}>
-          {recentSearches.map((keyword, index) => (
-            <li key={index} className={styles.keywordItem}>
-              <button
-                className={styles.keywordButton}
-                onClick={() => {
-                  setSearchKeyword(keyword);
-                  onSearch(keyword, searchRegion);
-                }}
-              >
-                {keyword}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className={styles.historyHeader}>
+          <h3 className={styles.sidebarTitle}>検索履歴</h3>
+          {searchHistory.length > 0 && (
+            <button className={styles.clearButton} onClick={clearHistory}>
+              消去
+            </button>
+          )}
+        </div>
+        
+        {searchHistory.length === 0 ? (
+          <p className={styles.emptyHistory}>検索履歴はありません</p>
+        ) : (
+          <ul className={styles.keywordList}>
+            {searchHistory.map((historyKeyword, index) => (
+              <li key={index} className={styles.keywordItem}>
+                <button
+                  className={styles.keywordButton}
+                  onClick={() => handleHistoryClick(historyKeyword)}
+                >
+                  {historyKeyword}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       
       <div className={styles.sidebarSection}>
@@ -182,41 +184,6 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggesti
             </li>
           ))}
         </ul>
-      </div>
-
-      {/* 検索履歴セクション */}
-      <div className={styles.keywordSection}>
-        <div className={styles.sectionHeader}>
-          <h3 className={styles.sectionTitle}>検索履歴</h3>
-          {searchHistory.length > 0 && (
-            <button className={styles.clearHistoryButton} onClick={clearHistory}>
-              消去
-            </button>
-          )}
-        </div>
-        
-        {searchHistory.length === 0 ? (
-          <p className={styles.emptyHistory}>検索履歴はありません</p>
-        ) : (
-          <div className={styles.keywordList}>
-            {searchHistory.map((historyKeyword, index) => (
-              <div 
-                key={`history-${index}`}
-                className={`${styles.historyItem}`}
-                onClick={() => handleHistoryClick(historyKeyword)}
-              >
-                <span className={styles.historyKeyword}>{historyKeyword}</span>
-                <button 
-                  className={styles.removeButton}
-                  onClick={(e) => removeHistoryItem(e, historyKeyword)}
-                  title="この履歴を削除"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className={styles.instructions}>

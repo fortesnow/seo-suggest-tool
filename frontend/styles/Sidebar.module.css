@@ -254,12 +254,12 @@
 
 .emptyHistory {
   text-align: center;
-  padding: 1rem;
-  color: #6b7280;
+  padding: 10px;
+  color: #718096;
   font-size: 0.9rem;
-  background-color: #f9fafb;
-  border-radius: 6px;
-  border: 1px dashed #e5e7eb;
+  background-color: #f7fafc;
+  border-radius: 4px;
+  margin: 0;
 }
 
 .keywordTag {
@@ -408,4 +408,25 @@
   background-color: #f1f5f9;
   border-color: #cbd5e1;
   color: #1e293b;
+}
+
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.clearButton {
+  background: none;
+  border: none;
+  color: #718096;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.clearButton:hover {
+  color: #e53e3e;
+  text-decoration: underline;
 } 
