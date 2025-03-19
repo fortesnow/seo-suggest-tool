@@ -1,0 +1,342 @@
+.dashboard {
+  background-color: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.date {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* 統計カード */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.statIcon {
+  font-size: 1.75rem;
+  margin-right: 1rem;
+  color: #7c3aed;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statTitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
+  font-weight: 500;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* チャートグリッド */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.chartCard {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.chartTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.emptyChart {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px dashed #e5e7eb;
+}
+
+/* 棒グラフ */
+.barChart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.barChartItem {
+  display: flex;
+  align-items: center;
+}
+
+.barLabel {
+  width: 30%;
+  font-size: 0.85rem;
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barContainer {
+  flex: 1;
+  height: 24px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar {
+  height: 100%;
+  background-color: #8b5cf6;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.barValue {
+  position: absolute;
+  right: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+/* 円グラフ */
+.pieChartContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin-top: 1rem;
+}
+
+.pieChart {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+}
+
+.pieLabels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pieLabel {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.pieDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.highDot {
+  background-color: #4ade80;
+}
+
+.mediumDot {
+  background-color: #fbbf24;
+}
+
+.lowDot {
+  background-color: #94a3b8;
+}
+
+/* テーブルグリッド */
+.tablesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.tableCard {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+}
+
+.tableTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dataTable th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dataTable td {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.dataTable tr:last-child td {
+  border-bottom: none;
+}
+
+.dataTable tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.emptyTable {
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 0.95rem;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px dashed #e5e7eb;
+}
+
+/* プロジェクト統計 */
+.projectStats {
+  padding: 1rem 0;
+}
+
+.projectStat {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.projectStat:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.projectStatLabel {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.projectStatValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1rem;
+  }
+  
+  .chartsGrid,
+  .tablesGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+  
+  .statCard {
+    padding: 1rem;
+  }
+  
+  .statIcon {
+    font-size: 1.5rem;
+  }
+  
+  .statValue {
+    font-size: 1.25rem;
+  }
+} 
