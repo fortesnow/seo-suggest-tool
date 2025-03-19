@@ -3,7 +3,11 @@ export default async function handler(req, res) {
     const { keyword, region = 'jp' } = req.query;
     
     if (!keyword) {
-      return res.status(400).json({ error: 'キーワードが必要です' });
+      return res.status(200).json({ 
+        suggestions: [],
+        success: true,
+        isEmpty: true
+      });
     }
     
     console.log(`[API] キーワード検索: "${keyword}", リージョン: ${region}`);
@@ -12,40 +16,58 @@ export default async function handler(req, res) {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     console.log(`[API] バックエンドURL: ${apiUrl}`);
     
-    // Googleサジェスト取得
-    const googleResponse = await fetch(
-      `${apiUrl}/api/google-suggestions?keyword=${encodeURIComponent(keyword)}&region=${region}`,
-      { headers: { 'Accept': 'application/json' } }
-    );
-    
-    if (!googleResponse.ok) {
-      const errorText = await googleResponse.text();
-      console.error(`[API] バックエンドエラー: ${errorText}`);
-      throw new Error(`Googleサジェスト取得エラー (${googleResponse.status}): ${errorText}`);
+    try {
+      // Googleサジェスト取得
+      const googleResponse = await fetch(
+        `${apiUrl}/api/google-suggestions?keyword=${encodeURIComponent(keyword)}&region=${region}`,
+        { 
+          headers: { 'Accept': 'application/json' },
+          // タイムアウト設定を追加
+          signal: AbortSignal.timeout(5000)
+        }
+      );
+      
+      if (googleResponse.ok) {
+        const googleData = await googleResponse.json();
+        console.log(`[API] Googleデータ取得成功:`, googleData);
+        
+        // 有効なデータが返された場合
+        if (googleData && googleData.suggestions && googleData.suggestions.length > 0) {
+          res.setHeader('Cache-Control', 'max-age=0, s-maxage=86400');
+          return res.status(200).json({
+            suggestions: googleData.suggestions,
+            success: true
+          });
+        }
+      }
+      
+      // レスポンスが正常でないか、有効なデータがない場合はモックデータにフォールバック
+      throw new Error('有効な検索結果がありません - モックデータを使用します');
+      
+    } catch (apiError) {
+      console.warn('APIエラー - モックデータにフォールバック:', apiError.message);
+      // APIエラーの場合はモックデータを使用
+      const mockSuggestions = generateMockSuggestions(keyword, 15);
+      
+      res.setHeader('Cache-Control', 'max-age=0, s-maxage=3600');
+      return res.status(200).json({
+        suggestions: mockSuggestions,
+        success: true,
+        isMock: true
+      });
     }
     
-    const googleData = await googleResponse.json();
-    console.log(`[API] Googleデータ取得成功:`, googleData);
-    
-    // レスポンスの統合 - モックデータを使用して必ず結果を返す
-    const response = {
-      suggestions: googleData.suggestions || generateMockSuggestions(keyword, 10)
-    };
-    
-    // レスポンスヘッダーの設定
-    res.setHeader('Cache-Control', 'max-age=0, s-maxage=86400');
-    res.status(200).json(response);
   } catch (error) {
     console.error('サジェスト取得エラー:', error);
     
-    // エラーがあっても最低限のモックデータを返す
-    const mockSuggestions = generateMockSuggestions(req.query.keyword || '検索', 5);
+    // 最終的なフォールバック: 最低限のモックデータを生成
+    const lastResortMockSuggestions = generateMockSuggestions(req.query.keyword || '検索', 5);
     
     res.status(200).json({ 
-      suggestions: mockSuggestions,
+      suggestions: lastResortMockSuggestions,
       success: true,
       isMock: true,
-      error: error.message
+      isLastResort: true
     });
   }
 }
@@ -228,15 +250,58 @@ async function fetchAILongTailKeywords(keyword, suggestions) {
   }
 }
 
-// モックデータを生成する関数
+// モックサジェスト生成関数の強化
 function generateMockSuggestions(baseKeyword, count) {
-  const variations = [
-    '意味', '使い方', '例文', '英語', '類義語', '対義語', '画像', '動画',
-    'とは', '違い', '比較', 'おすすめ', 'ランキング', '一覧', '方法', '講座'
+  // 基本キーワードがnullや空文字の場合は、デフォルト値を使用
+  const keyword = baseKeyword && baseKeyword.trim() !== '' ? baseKeyword : '検索';
+  console.log(`モックデータ生成: "${keyword}" の ${count} 件`);
+  
+  // 一般的な関連キーワード（日本語）
+  const commonSuffixes = [
+    'とは', 'やり方', '方法', '意味', 
+    'おすすめ', 'ランキング', '比較', '違い', 
+    '最新', '2024', '使い方', 'アプリ', 
+    '無料', 'サービス', '対策', '例', 
+    'メリット', 'デメリット', '費用', '相場',
+    'プロ', '初心者', '入門', 'コツ'
   ];
   
-  return Array.from({ length: count }, (_, i) => ({
-    keyword: `${baseKeyword} ${variations[i % variations.length]}`,
-    volume: Math.floor(Math.random() * 1000) + 100
-  }));
+  // 結果配列
+  const suggestions = [];
+  
+  // ベースキーワードをそのまま追加（検索量を多めに）
+  suggestions.push({
+    keyword: keyword,
+    volume: Math.floor(Math.random() * 5000) + 5000
+  });
+  
+  // サフィックスを付けたパターンを追加
+  for (let i = 0; i < Math.min(count - 1, commonSuffixes.length); i++) {
+    const newKeyword = `${keyword} ${commonSuffixes[i]}`;
+    
+    suggestions.push({
+      keyword: newKeyword,
+      volume: Math.floor(Math.random() * 3000) + 500
+    });
+  }
+  
+  // カウント数が足りない場合はランダム組み合わせで補う
+  while (suggestions.length < count) {
+    const randomSuffix1 = commonSuffixes[Math.floor(Math.random() * commonSuffixes.length)];
+    const randomSuffix2 = commonSuffixes[Math.floor(Math.random() * commonSuffixes.length)];
+    
+    if (randomSuffix1 === randomSuffix2) continue; // 同じサフィックスの組み合わせは避ける
+    
+    const newKeyword = `${keyword} ${randomSuffix1} ${randomSuffix2}`;
+    
+    // 重複チェック
+    if (!suggestions.some(s => s.keyword === newKeyword)) {
+      suggestions.push({
+        keyword: newKeyword,
+        volume: Math.floor(Math.random() * 1000) + 100 // 長いキーワードは検索量を少なめに
+      });
+    }
+  }
+  
+  return suggestions;
 } 

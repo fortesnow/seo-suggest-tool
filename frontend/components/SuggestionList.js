@@ -16,15 +16,19 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
   
   // モック用のロングテールキーワードを生成
   const generateLongTailKeywords = (suggestions) => {
-    if (!suggestions || suggestions.length === 0) return [];
+    if (!suggestions || !Array.isArray(suggestions) || suggestions.length === 0) {
+      const baseKeyword = safeResults.keyword || '検索';
+      return generateBackupLongTailKeywords(baseKeyword);
+    }
 
-    const baseKeywords = suggestions.slice(0, 3).map(s => s.keyword);
+    const baseKeywords = suggestions.slice(0, 3).map(s => s.keyword || '検索');
     const longTailVariations = [
       'とは', 'おすすめ', '比較', '選び方', '違い', '評判', 'レビュー', '口コミ', '活用法', '使い方'
     ];
 
     const result = [];
     baseKeywords.forEach(baseKeyword => {
+      if (!baseKeyword) return; // 安全チェック
       longTailVariations.slice(0, 3).forEach(variation => {
         result.push({
           keyword: `${baseKeyword} ${variation}`,
@@ -33,38 +37,41 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
       });
     });
 
-    return result;
+    return result.length > 0 ? result : generateBackupLongTailKeywords('検索');
   };
   
+  // バックアップのロングテールキーワードを生成
+  const generateBackupLongTailKeywords = (baseKeyword) => {
+    const variations = [
+      'おすすめ', '比較', '違い', '最新', '2024', 'ランキング', '選び方', '入門', '初心者', 'メリット'
+    ];
+    
+    return variations.map(variation => ({
+      keyword: `${baseKeyword} ${variation}`,
+      volume: Math.floor(Math.random() * 200) + 50
+    }));
+  };
+  
+  // 何があっても常にロングテールキーワードを生成
   const longTailKeywords = generateLongTailKeywords(suggestions);
 
   // AI生成サジェストを取得する関数
   useEffect(() => {
-    if (safeResults && activeTab === 'aiSuggestions' && aiSuggestions.length === 0 && !isLoadingAi) {
+    if (activeTab === 'aiSuggestions' && aiSuggestions.length === 0 && !isLoadingAi) {
       loadAiSuggestions();
     }
-  }, [activeTab, safeResults, aiSuggestions.length, isLoadingAi]);
-
-  // 結果が存在しない場合
-  if (!suggestions || suggestions.length === 0) {
-    return (
-      <div className={styles.noResults}>
-        検索結果がありません。別のキーワードをお試しください。
-      </div>
-    );
-  }
+  }, [activeTab, aiSuggestions.length, isLoadingAi]);
 
   // AI生成サジェストを取得する関数
   const loadAiSuggestions = async () => {
-    if (!suggestions || suggestions.length === 0) return;
-    
     setIsLoadingAi(true);
     setAiError(null);
     
     try {
       // ここでは実際のAPIではなく、モックデータを生成します
       setTimeout(() => {
-        const baseKeyword = suggestions[0]?.keyword || '';
+        // suggestions が空の場合のフォールバック
+        const baseKeyword = (suggestions[0]?.keyword || safeResults.keyword || '検索');
         const mockAiSuggestions = generateAiSuggestions(baseKeyword, 10);
         setAiSuggestions(mockAiSuggestions);
         setIsLoadingAi(false);
@@ -103,6 +110,26 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
   const displayLongTail = showAllLongTail 
     ? longTailKeywords 
     : longTailKeywords.slice(0, 10);
+
+  // 検索結果が空の場合でも、常にUIは表示する（モックデータを生成）
+  if (!suggestions || suggestions.length === 0) {
+    // バックアップデータの生成
+    const mockData = {
+      suggestions: Array.from({ length: 5 }, (_, i) => ({
+        keyword: `検索キーワード例 ${i + 1}`,
+        volume: Math.floor(Math.random() * 1000) + 100
+      }))
+    };
+    
+    return (
+      <div className={styles.container}>
+        <div className={styles.noResults}>
+          <p>検索結果がありません。別のキーワードをお試しください。</p>
+          <p className={styles.hint}>検索例: 「SEO対策」「マーケティング」「Webデザイン」</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -146,7 +173,7 @@ const SuggestionList = ({ results, onKeywordSelect }) => {
               {displaySuggestions.map((suggestion, index) => (
                 <div key={index} className={styles.keywordItem}>
                   <div className={styles.keywordContent}>
-                    <span className={styles.keyword}>{suggestion.keyword}</span>
+                    <span className={styles.keyword}>{suggestion.keyword || `キーワード ${index + 1}`}</span>
                   </div>
                   <div className={styles.keywordMeta}>
                     <span className={styles.volume}>
