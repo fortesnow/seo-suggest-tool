@@ -200,14 +200,20 @@ const NeedsAnalysis = ({ keyword, autoAnalyze = false }) => {
             </div>
           ) : null}
           
-          {Object.entries(formatAnalysis(analysis)).map(([section, content]) => (
-            content ? (
-              <div key={section} className={styles.analysisSection}>
-                <h4>{section}</h4>
-                <p>{content}</p>
-              </div>
-            ) : null
-          ))}
+          <div className={styles.analysisGrid}>
+            {Object.entries(formatAnalysis(analysis)).map(([section, content]) => (
+              content ? (
+                <div key={section} className={styles.analysisCard}>
+                  <div className={styles.cardHeader}>
+                    <h4>{section}</h4>
+                  </div>
+                  <div className={styles.cardContent}>
+                    <p>{content}</p>
+                  </div>
+                </div>
+              ) : null
+            ))}
+          </div>
         </div>
       )}
       

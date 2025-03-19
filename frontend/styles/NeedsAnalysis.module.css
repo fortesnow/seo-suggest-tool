@@ -102,58 +102,112 @@
   padding: 1.5rem;
 }
 
-.analysisSection {
-  margin-bottom: 1.25rem;
+.analysisGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
 }
 
-.analysisSection:last-child {
-  margin-bottom: 0;
+.analysisCard {
+  background-color: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid #edf2f7;
+  transition: all 0.2s;
 }
 
-.analysisSection h4 {
+.analysisCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.cardHeader {
+  padding: 1rem 1.25rem;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.cardHeader h4 {
+  margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-color);
-  margin: 0 0 0.5rem 0;
   display: flex;
   align-items: center;
+  position: relative;
+  padding-left: 1.5rem;
 }
 
-.analysisSection h4::before {
+.cardHeader h4::before {
   content: '';
-  display: inline-block;
-  width: 12px;
-  height: 12px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: 50%;
-  margin-right: 0.5rem;
 }
 
 /* カテゴリー別の色分け */
-.analysisSection:nth-child(1) h4::before {
-  background-color: #3182ce; /* 顕在ニーズ - 青 */
+.analysisCard:nth-child(1) .cardHeader {
+  border-top: 3px solid #3182ce; /* 顕在ニーズ - 青 */
 }
 
-.analysisSection:nth-child(2) h4::before {
-  background-color: #38a169; /* 潜在ニーズ - 緑 */
+.analysisCard:nth-child(1) .cardHeader h4::before {
+  background-color: #3182ce;
 }
 
-.analysisSection:nth-child(3) h4::before {
-  background-color: #dd6b20; /* ターゲットユーザー - オレンジ */
+.analysisCard:nth-child(2) .cardHeader {
+  border-top: 3px solid #38a169; /* 潜在ニーズ - 緑 */
 }
 
-.analysisSection:nth-child(4) h4::before {
-  background-color: #805ad5; /* コンテンツ提案 - 紫 */
+.analysisCard:nth-child(2) .cardHeader h4::before {
+  background-color: #38a169;
 }
 
-.analysisSection p {
+.analysisCard:nth-child(3) .cardHeader {
+  border-top: 3px solid #dd6b20; /* ターゲットユーザー - オレンジ */
+}
+
+.analysisCard:nth-child(3) .cardHeader h4::before {
+  background-color: #dd6b20;
+}
+
+.analysisCard:nth-child(4) .cardHeader {
+  border-top: 3px solid #805ad5; /* コンテンツ提案 - 紫 */
+}
+
+.analysisCard:nth-child(4) .cardHeader h4::before {
+  background-color: #805ad5;
+}
+
+.cardContent {
+  padding: 1.25rem;
+}
+
+.cardContent p {
   margin: 0;
   color: var(--text-color);
   font-size: 0.95rem;
-  line-height: 1.5;
-  background-color: #ffffff;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid #edf2f7;
+  line-height: 1.6;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .analysisGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .cardHeader h4 {
+    font-size: 0.95rem;
+  }
+  
+  .cardContent p {
+    font-size: 0.9rem;
+  }
 }
 
 .apiKeyMissing {

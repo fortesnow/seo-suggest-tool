@@ -11,6 +11,7 @@
   display: flex;
   margin-bottom: 1.25rem;
   border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
 }
 
 .tab {
@@ -25,6 +26,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .tabIcon {
@@ -124,9 +126,76 @@
   box-shadow: var(--shadow-md);
 }
 
+.aiKeywordItem {
+  background-color: #f0f9ff;
+  border-color: #bee3f8;
+}
+
+.aiKeywordItem:hover {
+  background-color: #e6f6ff;
+  border-color: #90cdf4;
+}
+
+.keywordContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-grow: 1;
+}
+
+.searchIntent {
+  font-size: 0.75rem;
+  color: #718096;
+  background-color: #f7fafc;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  display: inline-block;
+  max-width: fit-content;
+  border: 1px solid #e2e8f0;
+}
+
+/* 検索ボリュームに基づくスタイル */
+.highVolume {
+  color: #2B6CB0;
+  font-weight: 700;
+  background-color: #EBF8FF;
+}
+
+.mediumVolume {
+  color: #3182CE;
+  font-weight: 600;
+  background-color: #BEE3F8;
+}
+
+.keywordItem.highVolume {
+  border-left: 3px solid #2B6CB0;
+  background-color: #F0F9FF;
+}
+
+.keywordItem.mediumVolume {
+  border-left: 3px solid #3182CE;
+}
+
+/* 既存のスタイルを調整 */
 .keyword {
   font-weight: 500;
   flex-grow: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aiIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-color);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+  line-height: 1;
 }
 
 .keywordActions {
@@ -143,6 +212,7 @@
   color: #4a5568;
   white-space: nowrap;
   font-weight: 500;
+  transition: all 0.2s;
 }
 
 .analyzeButton {
@@ -184,6 +254,60 @@
   border-color: var(--primary-color);
 }
 
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: #4a5568;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loadingSpinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error {
+  padding: 1.5rem;
+  text-align: center;
+  background-color: #fff5f5;
+  border-radius: var(--radius-md);
+  color: #c53030;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.retryButton, .generateButton {
+  background-color: #2c5282;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retryButton:hover, .generateButton:hover {
+  background-color: #2a4365;
+  transform: translateY(-1px);
+}
+
 .noResults {
   padding: 2.5rem;
   text-align: center;
@@ -192,4 +316,31 @@
   border-radius: var(--radius-lg);
   margin: 1rem 0;
   border: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .tab {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .tabIcon {
+    font-size: 0.8rem;
+  }
+  
+  .keywordItem {
+    padding: 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .keywordActions {
+    width: 100%;
+    margin-top: 0.5rem;
+    justify-content: space-between;
+  }
 } 

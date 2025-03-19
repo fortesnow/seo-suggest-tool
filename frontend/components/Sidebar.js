@@ -5,21 +5,65 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
   const [keyword, setKeyword] = useState(initialKeyword);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [region, setRegion] = useState(initialRegion);
+  const [searchHistory, setSearchHistory] = useState([]);
+
+  // 初期化時に検索履歴をローカルストレージから読み込む
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('searchHistory');
+    if (savedHistory) {
+      try {
+        setSearchHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('検索履歴の読み込みに失敗しました', e);
+        setSearchHistory([]);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setKeyword(initialKeyword);
+    
+    // 検索キーワードが有効な場合、履歴に追加
+    if (initialKeyword && initialKeyword.trim()) {
+      addToSearchHistory(initialKeyword.trim());
+    }
   }, [initialKeyword]);
+
+  // 検索履歴に追加する関数
+  const addToSearchHistory = (searchKeyword) => {
+    // すでに同じキーワードが履歴にある場合は最新に更新するため一度削除
+    const filteredHistory = searchHistory.filter(item => item !== searchKeyword);
+    
+    // 新しいキーワードを先頭に追加
+    const newHistory = [searchKeyword, ...filteredHistory].slice(0, 10);
+    
+    setSearchHistory(newHistory);
+    localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (keyword.trim()) {
       onSearch(keyword.trim(), region);
+      addToSearchHistory(keyword.trim());
     }
+  };
+
+  const handleHistoryClick = (historyKeyword) => {
+    setKeyword(historyKeyword);
+    onSearch(historyKeyword, region);
   };
 
   const handleSampleKeywordClick = (sampleKeyword) => {
     setKeyword(sampleKeyword);
     onSearch(sampleKeyword.trim(), region);
+    addToSearchHistory(sampleKeyword.trim());
+  };
+
+  // 履歴を消去する関数
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('searchHistory');
   };
 
   const sampleKeywords = [
@@ -81,6 +125,32 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
           </button>
         </form>
       </div>
+
+      {searchHistory.length > 0 && (
+        <div className={styles.keywordSection}>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>検索履歴</h3>
+            <button 
+              className={styles.clearHistoryButton}
+              onClick={clearHistory}
+              title="履歴を消去"
+            >
+              消去
+            </button>
+          </div>
+          <div className={styles.keywordList}>
+            {searchHistory.map((kw, index) => (
+              <span
+                key={`history-${index}`}
+                className={`${styles.keywordTag} ${styles.historyTag}`}
+                onClick={() => handleHistoryClick(kw)}
+              >
+                {kw}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className={styles.keywordSection}>
         <h3 className={styles.sectionTitle}>サンプルキーワード</h3>
