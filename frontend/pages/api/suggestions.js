@@ -1,63 +1,44 @@
 export default async function handler(req, res) {
-  const { keyword, region = 'jp' } = req.query;
-
-  if (!keyword) {
-    return res.status(400).json({ error: 'キーワードは必須です' });
-  }
-
   try {
-    // Googleサジェストを取得
-    const suggestions = await fetchGoogleSuggestions(keyword, region);
+    const { keyword, region = 'jp' } = req.query;
     
-    // ログを追加
-    console.log('Fetched suggestions:', suggestions);
+    if (!keyword) {
+      return res.status(400).json({ error: 'キーワードが必要です' });
+    }
     
-    // 検索ボリュームを追加（最大10件に制限）
-    const suggestionsWithVolume = suggestions.slice(0, 10).map(suggestion => ({
-      keyword: suggestion,
-      searchVolume: generateSearchVolume(suggestion)
-    }));
+    console.log(`[API] キーワード検索: "${keyword}", リージョン: ${region}`);
     
-    // 平均検索ボリュームを計算
-    const totalVolume = suggestionsWithVolume.reduce((sum, item) => sum + item.searchVolume, 0);
-    const averageSearchVolume = suggestionsWithVolume.length > 0 
-      ? Math.round(totalVolume / suggestionsWithVolume.length) 
-      : 0;
+    // バックエンドAPIのURLを環境変数から取得
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    console.log(`[API] バックエンドURL: ${apiUrl}`);
     
-    // AI生成ロングテールキーワードを取得
-    const longTailKeywords = await fetchAILongTailKeywords(keyword, suggestionsWithVolume);
+    // Googleサジェスト取得
+    const googleResponse = await fetch(
+      `${apiUrl}/api/suggestions?keyword=${encodeURIComponent(keyword)}`,
+      { headers: { 'Accept': 'application/json' } }
+    );
     
-    // ロングテールキーワードの平均検索ボリュームを計算
-    const longTailTotalVolume = longTailKeywords.reduce((sum, item) => sum + item.searchVolume, 0);
-    const longTailAverageSearchVolume = longTailKeywords.length > 0 
-      ? Math.round(longTailTotalVolume / longTailKeywords.length) 
-      : 0;
-
-    // レスポンスヘッダーを設定
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (!googleResponse.ok) {
+      const errorText = await googleResponse.text();
+      throw new Error(`Googleサジェスト取得エラー (${googleResponse.status}): ${errorText}`);
+    }
     
-    // 日本語文字化け防止のための処理
-    const responseData = {
-      keyword,
-      suggestions: suggestionsWithVolume.map(item => ({
-        ...item,
-        keyword: ensureUtf8(item.keyword)
-      })),
-      averageSearchVolume,
-      longTailKeywords: longTailKeywords.map(item => ({
-        ...item,
-        keyword: ensureUtf8(item.keyword)
-      })),
-      longTailAverageSearchVolume
+    const googleData = await googleResponse.json();
+    
+    // レスポンスの統合
+    const response = {
+      suggestions: googleData.suggestions || []
     };
     
-    res.status(200).json(responseData);
+    // レスポンスヘッダーの設定
+    res.setHeader('Cache-Control', 'max-age=0, s-maxage=86400');
+    res.status(200).json(response);
   } catch (error) {
-    console.error('Error fetching suggestions:', error);
-    res.status(500).json({ error: 'サジェストの取得中にエラーが発生しました' });
+    console.error('サジェスト取得エラー:', error);
+    res.status(500).json({ 
+      error: 'サジェストの取得に失敗しました',
+      message: error.message
+    });
   }
 }
 

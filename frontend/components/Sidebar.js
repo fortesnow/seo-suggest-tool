@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import styles from '../styles/Sidebar.module.css';
 
-const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
-  const [keyword, setKeyword] = useState(initialKeyword);
+const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggestions = [] }) => {
+  const [searchKeyword, setSearchKeyword] = useState(initialKeyword);
+  const [searchRegion, setSearchRegion] = useState(initialRegion);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [region, setRegion] = useState(initialRegion);
   const [searchHistory, setSearchHistory] = useState([]);
 
   // 初期化時に検索履歴をローカルストレージから読み込む
@@ -12,7 +12,10 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
     const savedHistory = localStorage.getItem('searchHistory');
     if (savedHistory) {
       try {
-        setSearchHistory(JSON.parse(savedHistory));
+        const parsedHistory = JSON.parse(savedHistory);
+        // 重複を削除して最新の10件を取得
+        const uniqueHistory = [...new Set(parsedHistory)].slice(0, 10);
+        setSearchHistory(uniqueHistory);
       } catch (e) {
         console.error('検索履歴の読み込みに失敗しました', e);
         setSearchHistory([]);
@@ -20,14 +23,15 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
     }
   }, []);
 
+  // キーワードが変更されたときの処理
   useEffect(() => {
-    setKeyword(initialKeyword);
-    
-    // 検索キーワードが有効な場合、履歴に追加
-    if (initialKeyword && initialKeyword.trim()) {
-      addToSearchHistory(initialKeyword.trim());
-    }
+    setSearchKeyword(initialKeyword);
   }, [initialKeyword]);
+  
+  // 地域が変更されたときの処理
+  useEffect(() => {
+    setSearchRegion(initialRegion);
+  }, [initialRegion]);
 
   // 検索履歴に追加する関数
   const addToSearchHistory = (searchKeyword) => {
@@ -41,17 +45,18 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
     localStorage.setItem('searchHistory', JSON.stringify(newHistory));
   };
 
-  const handleSubmit = (e) => {
+  // 検索の実行
+  const handleSearch = (e) => {
     e.preventDefault();
-    if (keyword.trim()) {
-      onSearch(keyword.trim(), region);
-      addToSearchHistory(keyword.trim());
+    if (searchKeyword.trim()) {
+      onSearch(searchKeyword, searchRegion);
+      addToSearchHistory(searchKeyword.trim());
     }
   };
 
   const handleHistoryClick = (historyKeyword) => {
-    setKeyword(historyKeyword);
-    onSearch(historyKeyword, region);
+    setSearchKeyword(historyKeyword);
+    onSearch(historyKeyword, searchRegion);
   };
 
   // 履歴を消去する関数
@@ -60,86 +65,159 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
     localStorage.removeItem('searchHistory');
   };
 
+  // 履歴アイテムを削除
+  const removeHistoryItem = (e, keyword) => {
+    e.stopPropagation();
+    
+    try {
+      const updatedHistory = searchHistory.filter(kw => kw !== keyword);
+      setSearchHistory(updatedHistory);
+      localStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('検索履歴の削除に失敗しました:', error);
+    }
+  };
+
+  // 最近の検索キーワード（仮のデータ）
+  const recentSearches = [
+    'SEO 対策',
+    'Web マーケティング',
+    'コンテンツ SEO',
+    'キーワード 選定'
+  ];
+  
+  // よく検索されるキーワード（仮のデータ）
+  const popularKeywords = [
+    'WordPress SEO',
+    'Google アルゴリズム',
+    'SEO ツール',
+    'タイトルタグ 最適化',
+    'メタディスクリプション'
+  ];
+
   return (
     <div className={styles.sidebar}>
-      <div className={styles.logo}>
-        SEOキーワードツール
-      </div>
-
-      <div className={styles.searchContainer}>
-        <form onSubmit={handleSubmit}>
-          <div className={styles.inputGroup}>
+      <h1 className={styles.logo}>SEOキーワードツール</h1>
+      
+      <div className={styles.sidebarSection}>
+        <h3 className={styles.sidebarTitle}>キーワード検索</h3>
+        <form onSubmit={handleSearch} className={styles.sidebarForm}>
+          <div className={styles.formGroup}>
             <input
               type="text"
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="キーワードを入力"
-              className={styles.searchInput}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              required
+              className={styles.sidebarInput}
             />
           </div>
-          <div className={styles.toggleContainer}>
-            <span className={styles.toggleLabel}>詳細オプション</span>
-            <label className={styles.toggle}>
-              <input
-                type="checkbox"
-                className={styles.toggleInput}
-                checked={showAdvanced}
-                onChange={() => setShowAdvanced(!showAdvanced)}
-              />
-              <span className={styles.toggleSlider}></span>
-            </label>
+          <div className={styles.formGroup}>
+            <select
+              value={searchRegion}
+              onChange={(e) => setSearchRegion(e.target.value)}
+              className={styles.sidebarSelect}
+            >
+              <option value="jp">日本 (Google.co.jp)</option>
+              <option value="us">アメリカ (Google.com)</option>
+              <option value="uk">イギリス (Google.co.uk)</option>
+            </select>
           </div>
-
-          {showAdvanced && (
-            <div className={styles.advancedOptions}>
-              <div className={styles.formGroup}>
-                <label htmlFor="region">検索リージョン</label>
-                <select
-                  id="region"
-                  className={styles.select}
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                >
-                  <option value="jp">日本 (Google.co.jp)</option>
-                  <option value="us">アメリカ (Google.com)</option>
-                  <option value="uk">イギリス (Google.co.uk)</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          <button type="submit" className={styles.searchButton} disabled={!keyword.trim()}>
+          <button type="submit" className={styles.sidebarButton}>
             検索
           </button>
         </form>
       </div>
-
-      {searchHistory.length > 0 && (
-        <div className={styles.keywordSection}>
-          <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>検索履歴</h3>
-            <button 
-              className={styles.clearHistoryButton}
-              onClick={clearHistory}
-              title="履歴を消去"
-            >
-              消去
-            </button>
-          </div>
-          <div className={styles.keywordList}>
-            {searchHistory.map((kw, index) => (
-              <span
-                key={`history-${index}`}
-                className={`${styles.keywordTag} ${styles.historyTag}`}
-                onClick={() => handleHistoryClick(kw)}
-              >
-                {kw}
-              </span>
+      
+      {suggestions && suggestions.length > 0 && (
+        <div className={styles.sidebarSection}>
+          <h3 className={styles.sidebarTitle}>現在のキーワード案</h3>
+          <ul className={styles.keywordList}>
+            {suggestions.slice(0, 5).map((sugg, index) => (
+              <li key={index} className={styles.keywordItem}>
+                <button
+                  className={styles.keywordButton}
+                  onClick={() => onSearch(sugg.keyword, searchRegion)}
+                >
+                  {sugg.keyword}
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
+      
+      <div className={styles.sidebarSection}>
+        <h3 className={styles.sidebarTitle}>最近の検索</h3>
+        <ul className={styles.keywordList}>
+          {recentSearches.map((keyword, index) => (
+            <li key={index} className={styles.keywordItem}>
+              <button
+                className={styles.keywordButton}
+                onClick={() => {
+                  setSearchKeyword(keyword);
+                  onSearch(keyword, searchRegion);
+                }}
+              >
+                {keyword}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+      
+      <div className={styles.sidebarSection}>
+        <h3 className={styles.sidebarTitle}>人気のキーワード</h3>
+        <ul className={styles.keywordList}>
+          {popularKeywords.map((keyword, index) => (
+            <li key={index} className={styles.keywordItem}>
+              <button
+                className={styles.keywordButton}
+                onClick={() => {
+                  setSearchKeyword(keyword);
+                  onSearch(keyword, searchRegion);
+                }}
+              >
+                {keyword}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* 検索履歴セクション */}
+      <div className={styles.keywordSection}>
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>検索履歴</h3>
+          {searchHistory.length > 0 && (
+            <button className={styles.clearHistoryButton} onClick={clearHistory}>
+              消去
+            </button>
+          )}
+        </div>
+        
+        {searchHistory.length === 0 ? (
+          <p className={styles.emptyHistory}>検索履歴はありません</p>
+        ) : (
+          <div className={styles.keywordList}>
+            {searchHistory.map((historyKeyword, index) => (
+              <div 
+                key={`history-${index}`}
+                className={`${styles.historyItem}`}
+                onClick={() => handleHistoryClick(historyKeyword)}
+              >
+                <span className={styles.historyKeyword}>{historyKeyword}</span>
+                <button 
+                  className={styles.removeButton}
+                  onClick={(e) => removeHistoryItem(e, historyKeyword)}
+                  title="この履歴を削除"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className={styles.instructions}>
         <h3 className={styles.sectionTitle}>使い方</h3>

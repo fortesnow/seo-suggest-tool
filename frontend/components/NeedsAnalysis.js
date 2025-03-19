@@ -5,27 +5,29 @@ const NeedsAnalysis = ({ keyword, autoAnalyze = false }) => {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [apiKeyMissing, setApiKeyMissing] = useState(false);
+  const [isVisible, setIsVisible] = useState(autoAnalyze);
 
-  // キーワードが変更されたり、autoAnalyzeがtrueになったりした時に自動分析
+  // キーワードが変更されたときに分析を実行
   useEffect(() => {
-    if (autoAnalyze && keyword) {
+    if (keyword && isVisible && !analysis) {
       analyzeKeyword();
     }
-  }, [keyword, autoAnalyze]);
-
+  }, [keyword, isVisible]);
+  
+  // 自動分析モードが変更されたときに可視性を更新
+  useEffect(() => {
+    setIsVisible(autoAnalyze);
+  }, [autoAnalyze]);
+  
+  // キーワード分析を実行する関数
   const analyzeKeyword = async () => {
     if (!keyword) return;
     
     setLoading(true);
     setError(null);
-    setAnalysis(null);
     
     try {
-      const apiUrl = `/api/analyze-needs`;
-      console.log(`Sending analysis request to: ${apiUrl}`);
-      
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/api/analyze-needs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,193 +35,117 @@ const NeedsAnalysis = ({ keyword, autoAnalyze = false }) => {
         body: JSON.stringify({ keyword }),
       });
       
-      // APIのレスポンスをログに記録（デバッグ用）
-      console.log('API Response status:', response.status);
-      console.log('Response content type:', response.headers.get('content-type'));
-      
-      // レスポンスが正常でない場合
       if (!response.ok) {
-        let errorData = {};
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          console.error('Error parsing error response:', e);
-        }
-        
-        console.log('API error details:', errorData);
-        
-        // APIキーが設定されていないというエラーの場合は特別な処理
-        if (errorData.apiKeySet === false) {
-          setApiKeyMissing(false);  // Renderバックエンドに移行したので不要
-        }
-        
-        throw new Error(errorData.error || `サーバーエラー (${response.status})`);
+        throw new Error('分析APIからのレスポンスにエラーがありました');
       }
       
       const data = await response.json();
       
-      // デバッグ用：レスポンスデータの構造を詳細に記録
-      console.log('Analysis result received. Data type:', typeof data);
-      console.log('Data structure:', JSON.stringify(data).substring(0, 100) + '...');
-      if (data.analysis) {
-        console.log('Analysis type:', typeof data.analysis);
-        console.log('Analysis preview:', typeof data.analysis === 'string' 
-          ? data.analysis.substring(0, 50) + '...' 
-          : 'Not a string');
+      if (data.success && data.analysis) {
+        setAnalysis(data.analysis);
+      } else {
+        throw new Error(data.error || 'データ形式が無効です');
       }
-      
-      if (data.success === false) {
-        throw new Error(data.error || 'キーワード分析に失敗しました');
-      }
-      
-      setAnalysis(data);
-    } catch (error) {
-      console.error('Error analyzing keyword:', error);
-      setError(error.message);
+    } catch (err) {
+      console.error('キーワード分析中にエラーが発生しました:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
-
-  // 分析結果をセクションに分割する
-  const formatAnalysis = (analysisData) => {
-    if (!analysisData) return {};
+  
+  // 可視性を切り替える関数
+  const toggleVisibility = () => {
+    setIsVisible(!isVisible);
     
-    // 返されたデータの形式を確認
-    // analysisDataがオブジェクトの場合、そのanalysisプロパティを取得
-    let text = '';
-    
-    if (typeof analysisData === 'object') {
-      // analysisDataがオブジェクトの場合（バックエンドからの直接レスポンス）
-      text = analysisData.analysis;
-    } else {
-      // 既に文字列の場合（レガシーフォーマット向け）
-      text = analysisData;
+    // 初めて表示される場合かつ分析がまだの場合は分析を実行
+    if (!isVisible && !analysis && !loading) {
+      analyzeKeyword();
     }
-    
-    // textが文字列でない場合、空のオブジェクトを返す
-    if (typeof text !== 'string') {
-      console.error('Analysis text is not a string:', typeof text, text);
-      return {
-        顕在ニーズ: '分析結果の形式が不正です',
-        潜在ニーズ: '',
-        ターゲットユーザー: '',
-        コンテンツ提案: ''
-      };
-    }
-    
-    // 改行で分割し、空行や不要な空白を取り除く
-    const lines = text.split('\n').filter(line => line.trim());
-    
-    // セクション別に整理
-    const sections = {
-      顕在ニーズ: '',
-      潜在ニーズ: '',
-      ターゲットユーザー: '',
-      コンテンツ提案: ''
-    };
-    
-    let currentSection = '';
-    
-    lines.forEach(line => {
-      // セクションのヘッダーを検出
-      if (line.includes('顕在ニーズ:')) {
-        currentSection = '顕在ニーズ';
-        sections[currentSection] = line.replace(/^.*顕在ニーズ:/, '').trim();
-      } else if (line.includes('潜在ニーズ:')) {
-        currentSection = '潜在ニーズ';
-        sections[currentSection] = line.replace(/^.*潜在ニーズ:/, '').trim();
-      } else if (line.includes('ターゲットユーザー:')) {
-        currentSection = 'ターゲットユーザー';
-        sections[currentSection] = line.replace(/^.*ターゲットユーザー:/, '').trim();
-      } else if (line.includes('コンテンツ提案:')) {
-        currentSection = 'コンテンツ提案';
-        sections[currentSection] = line.replace(/^.*コンテンツ提案:/, '').trim();
-      } else if (currentSection) {
-        // 現在のセクションに内容を追加
-        sections[currentSection] += ' ' + line.trim();
-      }
-    });
-    
-    return sections;
   };
-
-  // APIキーがない場合の説明用コンポーネント
-  const ApiKeyMissingInfo = () => (
-    <div className={styles.apiKeyMissing}>
-      <h4>Gemini API機能が無効です</h4>
-      <p>
-        この機能を使用するには、管理者がVercel環境変数に<code>GEMINI_API_KEY</code>を設定する必要があります。
-        <a href="https://ai.google.dev/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>
-        でAPIキーを取得し、Vercelプロジェクト設定で環境変数として追加してください。
-      </p>
-    </div>
-  );
-
+  
+  // 分析結果を整形する関数
+  const formatAnalysis = (text) => {
+    if (!text) return '';
+    
+    // 行分割
+    const lines = text.split('\n');
+    
+    // HTMLに変換
+    return lines.map((line, index) => {
+      if (line.trim() === '') return <br key={index} />;
+      
+      // 「- 」などの箇条書きを検出
+      if (line.trim().startsWith('- ')) {
+        return <li key={index}>{line.trim().substring(2)}</li>;
+      }
+      
+      // 「顕在ニーズ:」などのラベルを検出
+      const labelMatch = line.match(/^(顕在ニーズ|潜在ニーズ|ターゲットユーザー|コンテンツ提案):\s*(.+)$/i);
+      if (labelMatch) {
+        return (
+          <div key={index} className={styles.analysisItem}>
+            <strong className={styles.analysisLabel}>{labelMatch[1]}:</strong>
+            <span className={styles.analysisContent}>{labelMatch[2]}</span>
+          </div>
+        );
+      }
+      
+      return <p key={index}>{line}</p>;
+    });
+  };
+  
+  if (!keyword) {
+    return null;
+  }
+  
   return (
-    <div className={styles.needsAnalysis}>
-      <div className={styles.needsHeader}>
-        <h3>キーワードニーズ分析</h3>
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h2 className={styles.title}>
+          キーワード分析
+          {keyword && <span className={styles.keyword}>「{keyword}」</span>}
+        </h2>
         <button 
-          className={styles.analyzeButton}
-          onClick={analyzeKeyword}
-          disabled={loading || !keyword || apiKeyMissing}
+          className={styles.toggleButton}
+          onClick={toggleVisibility}
         >
-          {loading ? '分析中...' : 'AIで分析'}
+          {isVisible ? '閉じる ▲' : '表示 ▼'}
         </button>
       </div>
       
-      {/* APIキー未設定の場合の警告表示 */}
-      {apiKeyMissing && <ApiKeyMissingInfo />}
-      
-      {error && !apiKeyMissing && (
-        <div className={styles.error}>
-          <p>{error}</p>
-          <p className={styles.fallbackNote}>
-            <strong>代替策:</strong> Vercel環境でGemini APIキーを設定するか、
-            一時的なデモ表示としてモックデータを使用できます。
-          </p>
-        </div>
-      )}
-      
-      {loading && (
-        <div className={styles.loading}>
-          <div className={styles.loadingSpinner}></div>
-          <span>AIでキーワードを分析中...</span>
-        </div>
-      )}
-      
-      {analysis && !loading && (
-        <div className={styles.analysisResults}>
-          {analysis.isMock || analysis.isFallback ? (
-            <div className={styles.mockNotice}>
-              <p>※ この結果はデモ表示です。実際のAI分析ではありません。</p>
-              {analysis.originalError && (
-                <p className={styles.errorInfo}>元のエラー: {analysis.originalError}</p>
-              )}
+      {isVisible && (
+        <div className={styles.content}>
+          {loading ? (
+            <div className={styles.loading}>
+              <div className={styles.spinner}></div>
+              <p>分析中...</p>
             </div>
-          ) : null}
-          
-          <div className={styles.analysisGrid}>
-            {Object.entries(formatAnalysis(analysis)).map(([section, content]) => (
-              content ? (
-                <div key={section} className={styles.analysisCard}>
-                  <div className={styles.cardHeader}>
-                    <h4>{section}</h4>
-                  </div>
-                  <div className={styles.cardContent}>
-                    <p>{content}</p>
-                  </div>
-                </div>
-              ) : null
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {!analysis && !loading && !error && !apiKeyMissing && (
-        <div className={styles.placeholder}>
-          <p>「AIで分析」ボタンをクリックして、キーワード「{keyword || ''}」のユーザーニーズを分析してください。</p>
+          ) : error ? (
+            <div className={styles.error}>
+              <p>エラー: {error}</p>
+              <button 
+                className={styles.retryButton}
+                onClick={analyzeKeyword}
+              >
+                再試行
+              </button>
+            </div>
+          ) : analysis ? (
+            <div className={styles.analysisResult}>
+              {formatAnalysis(analysis)}
+            </div>
+          ) : (
+            <div className={styles.empty}>
+              <p>「分析」ボタンをクリックすると、このキーワードの潜在・顕在ニーズを分析します。</p>
+              <button 
+                className={styles.analyzeButton}
+                onClick={analyzeKeyword}
+              >
+                分析を実行
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

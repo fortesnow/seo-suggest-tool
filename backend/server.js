@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const natural = require('natural');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -348,6 +349,177 @@ app.get('/api/yahoo-suggestions', async (req, res) => {
     res.status(500).json({ error: 'Yahoo!サジェストの取得に失敗しました' });
   }
 });
+
+// 関連キーワードの自動グルーピングエンドポイント
+app.post('/api/group-keywords', async (req, res) => {
+  try {
+    const { keywords } = req.body;
+    
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      return res.status(400).json({ error: 'キーワードの配列が必要です' });
+    }
+
+    console.log(`[DEBUG] Grouping ${keywords.length} keywords`);
+
+    // キーワードをグループ化
+    const groups = groupKeywordsBySimilarity(keywords);
+
+    return res.status(200).json({
+      groups,
+      success: true
+    });
+  } catch (error) {
+    console.error('キーワードグルーピング中にエラーが発生しました:', error);
+    return res.status(500).json({ error: 'キーワードのグルーピングに失敗しました', details: error.message });
+  }
+});
+
+// キーワードのグルーピング関数
+function groupKeywordsBySimilarity(keywords) {
+  // TF-IDFベクトライザーを初期化
+  const TfIdf = natural.TfIdf;
+  const tfidf = new TfIdf();
+
+  // 各キーワードをTF-IDFに追加
+  keywords.forEach(keyword => {
+    tfidf.addDocument(keyword);
+  });
+
+  // 類似度行列の計算
+  const similarityMatrix = [];
+  for (let i = 0; i < keywords.length; i++) {
+    similarityMatrix[i] = [];
+    for (let j = 0; j < keywords.length; j++) {
+      if (i === j) {
+        // 自分自身との類似度は1
+        similarityMatrix[i][j] = 1;
+      } else {
+        // コサイン類似度の簡易計算
+        const similarity = calculateSimilarity(keywords[i], keywords[j]);
+        similarityMatrix[i][j] = similarity;
+      }
+    }
+  }
+
+  // 階層的クラスタリング
+  const groups = hierarchicalClustering(similarityMatrix, keywords, 0.5);
+
+  // グループにラベル付け
+  return labelGroups(groups);
+}
+
+// 簡易コサイン類似度計算
+function calculateSimilarity(str1, str2) {
+  // 単語分割
+  const words1 = str1.toLowerCase().split(/\s+/);
+  const words2 = str2.toLowerCase().split(/\s+/);
+  
+  // 共通単語数をカウント
+  const commonWords = words1.filter(word => words2.includes(word));
+  
+  // Jaccard類似度
+  const similarity = commonWords.length / (words1.length + words2.length - commonWords.length);
+  
+  return similarity;
+}
+
+// 階層的クラスタリング
+function hierarchicalClustering(similarityMatrix, items, threshold) {
+  let clusters = items.map((item, index) => ({
+    items: [item],
+    index
+  }));
+  
+  while (clusters.length > 1) {
+    // 最も類似度の高いクラスタペアを見つける
+    let maxSimilarity = -1;
+    let mergeI = -1;
+    let mergeJ = -1;
+    
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const similarity = calculateClusterSimilarity(
+          clusters[i], 
+          clusters[j], 
+          similarityMatrix
+        );
+        
+        if (similarity > maxSimilarity) {
+          maxSimilarity = similarity;
+          mergeI = i;
+          mergeJ = j;
+        }
+      }
+    }
+    
+    // 閾値を下回ったらクラスタリング終了
+    if (maxSimilarity < threshold) {
+      break;
+    }
+    
+    // クラスタをマージ
+    const newCluster = {
+      items: [...clusters[mergeI].items, ...clusters[mergeJ].items],
+      index: clusters.length
+    };
+    
+    // マージされたクラスタを削除
+    clusters.splice(Math.max(mergeI, mergeJ), 1);
+    clusters.splice(Math.min(mergeI, mergeJ), 1);
+    
+    // 新しいクラスタを追加
+    clusters.push(newCluster);
+  }
+  
+  return clusters.map(cluster => cluster.items);
+}
+
+// クラスタ間の類似度計算（平均連結法）
+function calculateClusterSimilarity(cluster1, cluster2, similarityMatrix) {
+  let totalSimilarity = 0;
+  let count = 0;
+  
+  for (const item1 of cluster1.items) {
+    const idx1 = cluster1.items.indexOf(item1);
+    
+    for (const item2 of cluster2.items) {
+      const idx2 = cluster2.items.indexOf(item2);
+      totalSimilarity += similarityMatrix[idx1][idx2];
+      count++;
+    }
+  }
+  
+  return totalSimilarity / count;
+}
+
+// グループにラベルを付ける
+function labelGroups(groups) {
+  return groups.map((group, index) => {
+    // 共通の単語を見つける
+    const words = {};
+    group.forEach(keyword => {
+      keyword.toLowerCase().split(/\s+/).forEach(word => {
+        if (word.length < 3) return; // 短すぎる単語は無視
+        words[word] = (words[word] || 0) + 1;
+      });
+    });
+    
+    // 最も頻度の高い単語をラベルとして使用
+    const commonWords = Object.entries(words)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(entry => entry[0]);
+    
+    const label = commonWords.length > 0 
+      ? commonWords.join(' ') 
+      : `グループ ${index + 1}`;
+    
+    return {
+      label,
+      keywords: group
+    };
+  });
+}
 
 // サーバー起動
 app.listen(PORT, () => {

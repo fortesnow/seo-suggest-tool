@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar';
 import NeedsAnalysis from '../components/NeedsAnalysis';
 import ProjectManager from '../components/ProjectManager';
 import Dashboard from '../components/Dashboard';
+import KeywordClusterView from '../components/KeywordClusterView';
 
 export default function Home() {
   const [keyword, setKeyword] = useState('');
@@ -17,10 +18,12 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [selectedKeyword, setSelectedKeyword] = useState('');
   const [analyzeMode, setAnalyzeMode] = useState(false);
+  const [showClusters, setShowClusters] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('search'); // 'search', 'projects', 'dashboard'
   const [currentProject, setCurrentProject] = useState(null);
   const [searchHistory, setSearchHistory] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
 
   // 初期化時に検索履歴をローカルストレージから読み込む
   useEffect(() => {
@@ -115,6 +118,8 @@ export default function Home() {
       
       // 検索タブをアクティブに
       setActiveTab('search');
+
+      setSuggestions(data.suggestions);
     } catch (err) {
       console.error('Error fetching suggestions:', err);
       setError(err.message || 'キーワード候補の取得中にエラーが発生しました');
@@ -190,6 +195,18 @@ export default function Home() {
     }
   };
 
+  // クラスタービューの切り替え
+  const toggleClusterView = () => {
+    setShowClusters(!showClusters);
+  };
+  
+  // キーワードを選択したときの処理
+  const handleSelectKeywordFromCluster = (keyword) => {
+    setSelectedKeyword(keyword);
+    // 必要であれば、クラスター表示を閉じる
+    // setShowClusters(false);
+  };
+
   return (
     <div className={styles.container}>
       <Head>
@@ -213,6 +230,7 @@ export default function Home() {
               onSearch={fetchSuggestions} 
               initialKeyword={keyword} 
               initialRegion={region}
+              suggestions={suggestions}
             />
           </div>
           
@@ -250,8 +268,8 @@ export default function Home() {
             {activeTab === 'search' && (
               <>
                 <SearchForm 
-                  keyword={keyword}
-                  setKeyword={setKeyword}
+                  keyword={keyword} 
+                  setKeyword={setKeyword} 
                   region={region}
                   setRegion={setRegion}
                   onSearch={fetchSuggestions}
@@ -271,8 +289,30 @@ export default function Home() {
                 ) : (
                   results && (
                     <>
+                      {showClusters && (
+                        <KeywordClusterView 
+                          suggestions={results.suggestions} 
+                          onSelectKeyword={handleSelectKeywordFromCluster}
+                        />
+                      )}
+                    
+                      <div className={styles.resultsActions}>
+                        <button 
+                          className={`${styles.actionButton} ${analyzeMode ? styles.activeButton : ''}`}
+                          onClick={() => setAnalyzeMode(!analyzeMode)}
+                        >
+                          ニーズ分析 {analyzeMode ? '非表示' : '表示'}
+                        </button>
+                        <button 
+                          className={`${styles.actionButton} ${showClusters ? styles.activeButton : ''}`}
+                          onClick={toggleClusterView}
+                        >
+                          グループ表示 {showClusters ? '非表示' : '表示'}
+                        </button>
+                      </div>
+                                            
                       <SuggestionList 
-                        results={results}
+                        results={results} 
                         onKeywordSelect={handleKeywordSelect}
                       />
                       
@@ -296,7 +336,7 @@ export default function Home() {
             )}
             
             {activeTab === 'dashboard' && (
-              <Dashboard
+              <Dashboard 
                 searchHistory={searchHistory}
                 currentProject={currentProject}
               />
