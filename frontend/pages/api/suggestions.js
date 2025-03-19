@@ -24,8 +24,8 @@ export default async function handler(req, res) {
       ? Math.round(totalVolume / suggestionsWithVolume.length) 
       : 0;
     
-    // ロングテールキーワードの生成（最大10件に制限）
-    const longTailKeywords = generateLongTailKeywords(keyword, suggestionsWithVolume).slice(0, 10);
+    // AI生成ロングテールキーワードを取得
+    const longTailKeywords = await fetchAILongTailKeywords(keyword, suggestionsWithVolume);
     
     // ロングテールキーワードの平均検索ボリュームを計算
     const longTailTotalVolume = longTailKeywords.reduce((sum, item) => sum + item.searchVolume, 0);
@@ -204,4 +204,37 @@ function generateLongTailKeywords(baseKeyword, suggestions) {
   }
   
   return longTailSuggestions;
+}
+
+// AI生成ロングテールキーワードを取得する関数
+async function fetchAILongTailKeywords(keyword, suggestions) {
+  try {
+    // 同じサーバーで動作するAIロングテールAPIを呼び出す
+    const apiUrl = `/api/ai-longtail`;
+    
+    // リクエストの準備
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        keyword,
+        suggestions: suggestions.slice(0, 5) // コンテキスト用に上位5件のサジェストを送信
+      })
+    });
+    
+    if (!response.ok) {
+      console.error(`AI longtail API returned ${response.status}`);
+      // 失敗した場合は従来のロングテール生成にフォールバック
+      return generateLongTailKeywords(keyword, suggestions);
+    }
+    
+    const data = await response.json();
+    return data.longTailKeywords || [];
+  } catch (error) {
+    console.error('Error fetching AI longtail keywords:', error);
+    // エラーの場合は従来のロングテール生成にフォールバック
+    return generateLongTailKeywords(keyword, suggestions);
+  }
 } 

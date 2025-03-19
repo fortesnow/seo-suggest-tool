@@ -54,22 +54,11 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
     onSearch(historyKeyword, region);
   };
 
-  const handleSampleKeywordClick = (sampleKeyword) => {
-    setKeyword(sampleKeyword);
-    onSearch(sampleKeyword.trim(), region);
-    addToSearchHistory(sampleKeyword.trim());
-  };
-
   // 履歴を消去する関数
   const clearHistory = () => {
     setSearchHistory([]);
     localStorage.removeItem('searchHistory');
   };
-
-  const sampleKeywords = [
-    'SEO', 'マーケティング', 'プログラミング', 'Web制作',
-    'AI', 'ブログ', 'YouTube', 'WordPress'
-  ];
 
   return (
     <div className={styles.sidebar}>
@@ -151,21 +140,6 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp' }) => {
           </div>
         </div>
       )}
-
-      <div className={styles.keywordSection}>
-        <h3 className={styles.sectionTitle}>サンプルキーワード</h3>
-        <div className={styles.keywordList}>
-          {sampleKeywords.map((kw, index) => (
-            <span
-              key={index}
-              className={styles.keywordTag}
-              onClick={() => handleSampleKeywordClick(kw)}
-            >
-              {kw}
-            </span>
-          ))}
-        </div>
-      </div>
 
       <div className={styles.instructions}>
         <h3 className={styles.sectionTitle}>使い方</h3>
