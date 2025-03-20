@@ -77,15 +77,6 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggesti
       console.error('検索履歴の削除に失敗しました:', error);
     }
   };
-  
-  // よく検索されるキーワード（仮のデータ）
-  const popularKeywords = [
-    'WordPress SEO',
-    'Google アルゴリズム',
-    'SEO ツール',
-    'タイトルタグ 最適化',
-    'メタディスクリプション'
-  ];
 
   return (
     <div className={styles.sidebar}>
@@ -120,24 +111,6 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggesti
         </form>
       </div>
       
-      {suggestions && suggestions.length > 0 && (
-        <div className={styles.sidebarSection}>
-          <h3 className={styles.sidebarTitle}>現在のキーワード案</h3>
-          <ul className={styles.keywordList}>
-            {suggestions.slice(0, 5).map((sugg, index) => (
-              <li key={index} className={styles.keywordItem}>
-                <button
-                  className={styles.keywordButton}
-                  onClick={() => onSearch(sugg.keyword, searchRegion)}
-                >
-                  {sugg.keyword}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
       {/* 検索履歴セクション */}
       <div className={styles.sidebarSection}>
         <div className={styles.historyHeader}>
@@ -165,25 +138,6 @@ const Sidebar = ({ onSearch, initialKeyword = '', initialRegion = 'jp', suggesti
             ))}
           </ul>
         )}
-      </div>
-      
-      <div className={styles.sidebarSection}>
-        <h3 className={styles.sidebarTitle}>人気のキーワード</h3>
-        <ul className={styles.keywordList}>
-          {popularKeywords.map((keyword, index) => (
-            <li key={index} className={styles.keywordItem}>
-              <button
-                className={styles.keywordButton}
-                onClick={() => {
-                  setSearchKeyword(keyword);
-                  onSearch(keyword, searchRegion);
-                }}
-              >
-                {keyword}
-              </button>
-            </li>
-          ))}
-        </ul>
       </div>
 
       <div className={styles.instructions}>

@@ -33,9 +33,12 @@ export default async function handler(req, res) {
         
         // 有効なデータが返された場合
         if (googleData && googleData.suggestions && googleData.suggestions.length > 0) {
+          // サジェストを最大10件に制限
+          const limitedSuggestions = googleData.suggestions.slice(0, 10);
+          
           res.setHeader('Cache-Control', 'max-age=0, s-maxage=86400');
           return res.status(200).json({
-            suggestions: googleData.suggestions,
+            suggestions: limitedSuggestions,
             success: true
           });
         }
@@ -46,8 +49,8 @@ export default async function handler(req, res) {
       
     } catch (apiError) {
       console.warn('APIエラー - モックデータにフォールバック:', apiError.message);
-      // APIエラーの場合はモックデータを使用
-      const mockSuggestions = generateMockSuggestions(keyword, 15);
+      // APIエラーの場合はモックデータを使用（10件に制限）
+      const mockSuggestions = generateMockSuggestions(keyword, 10);
       
       res.setHeader('Cache-Control', 'max-age=0, s-maxage=3600');
       return res.status(200).json({
@@ -60,8 +63,8 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('サジェスト取得エラー:', error);
     
-    // 最終的なフォールバック: 最低限のモックデータを生成
-    const lastResortMockSuggestions = generateMockSuggestions(req.query.keyword || '検索', 5);
+    // 最終的なフォールバック: 最低限のモックデータを生成（10件に制限）
+    const lastResortMockSuggestions = generateMockSuggestions(req.query.keyword || '検索', 10);
     
     res.status(200).json({ 
       suggestions: lastResortMockSuggestions,
